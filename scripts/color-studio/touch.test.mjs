@@ -115,3 +115,30 @@ test('invalid saved views fit safely and loading a second painting resets gestur
   c.load(c.puzzle,new Set(),{zoom:Infinity,x:NaN,y:1});assert.deepEqual(c.viewState(),{zoom:1,x:.5,y:.5});
   c.down(event(1,300,300));c.up(event(1,300,300));assert.equal(c.zoom,1);assert.equal(painted.length,2);
 });
+
+test('a visible hint leaves zoom and pan untouched; tiny offscreen hints cap at eight times',()=>{
+  const {instance:c,painted}=canvas();c.zoomAt(2.25,{x:320,y:310});const before=c.viewState();
+  c.focusRegion(0,{anchor:{x:50,y:50,radius:10},keepView:true});assert.deepEqual(c.viewState(),before);assert.equal(c.focused,0);assert.deepEqual(painted,[]);
+  c.canvas.getBoundingClientRect=()=>({left:0,top:0,width:100,height:100});c.resize();
+  c.focusRegion(0,{anchor:{x:60,y:60,radius:.1},keepView:false});assert.equal(c.zoom,8);assert.deepEqual(painted,[]);
+  c.zoomAt(40);assert.equal(c.zoom,40,'manual zoom remains available');
+});
+
+test('fill reveal is clipped to the actual region, ends promptly, and never redraws the main canvas',t=>{
+  const {instance:c}=canvas(),clips=[],frames=[];let mainDraws=0;
+  t.mock.method(globalThis,'requestAnimationFrame',callback=>{frames.push(callback);return frames.length;});
+  globalThis.cancelAnimationFrame=()=>{};
+  c.feedbackCanvas={width:1200,height:1200};c.feedbackCtx={setTransform(){},clearRect(){},save(){},restore(){},clip(path,rule){clips.push({path,rule});},createRadialGradient(){return{addColorStop(){}};},fillRect(){},stroke(){}};
+  c.draw=()=>mainDraws++;c.filled.add(0);c.revealFill(0,{x:50,y:50});const start=c.feedback[0].start;
+  assert.equal(frames.length,1);c.drawFeedback(start+100);assert.equal(clips[0].path,c.paths[0]);assert.equal(clips[0].rule,'evenodd');
+  c.drawFeedback(start+300);assert.equal(c.feedback.length,0);assert.equal(c.feedbackFrame,0);assert.equal(mainDraws,0);assert.deepEqual([...c.filled],[0]);
+  c.revealFill(0);c.zoomAt(3);assert.equal(c.feedback.length,0,'moving view clears any temporary mask');
+  c.reducedMotion={matches:true};c.revealFill(0);assert.equal(c.feedback.length,0,'reduced motion shows the fill immediately');
+  c.reducedMotion={matches:false};c.revealFill(0);c.filled.delete(0);c.drawFeedback(performance.now());assert.equal(c.feedback.length,0,'undo cannot leave a stale reveal');
+});
+
+test('hints near an edge keep the canvas on screen and do not zoom out of an established view',()=>{
+  const {instance:c}=canvas();c.zoomAt(3);c.focusRegion(0,{anchor:{x:1,y:1,radius:10}});
+  assert.equal(c.zoom,3);const origin=c.origin();assert.ok(origin.x<=0);assert.ok(origin.y<=0);
+  assert.ok(origin.x+c.puzzle.width*c.base*c.zoom>=c.w);assert.ok(origin.y+c.puzzle.height*c.base*c.zoom>=c.h);
+});

@@ -1,8 +1,8 @@
-import {catalog,artURL,thumbnailURL} from './art.js?v=20261115-flow-1';
-import {PaintingCanvas,previewURL,drawPuzzle,rgb,svgCommands} from './canvas.js?v=20261115-flow-1';
-import {getPainting,listCards,savePainting,saveUpgrade,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261115-flow-1';
-import {validPuzzle,repairGeometry} from './engine.js?v=20261115-flow-1';
-import {singlePicturePreview,previewPaintingId,isPaintingAvailable,nextUnfinishedColor,upgradePainting,paintingHistory} from './experience.js?v=20261115-flow-1';
+import {catalog,artURL,thumbnailURL} from './art.js?v=20261117-play-1';
+import {PaintingCanvas,previewURL,drawPuzzle,rgb,svgCommands} from './canvas.js?v=20261117-play-1';
+import {getPainting,listCards,savePainting,saveUpgrade,allPaintings,readPreferences,writePreferences,deletePainting} from './store.js?v=20261117-play-1';
+import {validPuzzle,repairGeometry} from './engine.js?v=20261117-play-1';
+import {singlePicturePreview,previewPaintingId,isPaintingAvailable,nextUnfinishedColor,upgradePainting,paintingHistory,colorProgress,colorCompletionMessage,findHint,progressPercent} from './experience.js?v=20261117-play-1';
 
 const $=id=>document.getElementById(id),icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -14,7 +14,7 @@ for(const art of catalog)if(art.legacyId&&favorites.has(art.legacyId))favorites.
 const apiBase=String(window.JOHNNY_CHAT_API_BASE_URL||(['localhost','127.0.0.1'].includes(location.hostname)?location.origin:'https://johnny-chat.onrender.com')).replace(/\/+$/,'');
 const api=path=>`${apiBase}/api/color-studio${path}`;
 let aiAvailable=null;
-const paintCanvas=new PaintingCanvas($('painting'),{paint:fillRegion,preferences,onViewChange:()=>{if(!$('paint-view').hidden)queueSave();},onZoom:z=>$('zoom-label').textContent=`${Math.round(z*100)}%`,onFocus:()=>{$('fill-found').hidden=false;},onAim:aiming=>$('canvas-note').textContent=aiming?'Move to aim. Lift to color.':'Pinch to explore · Hold for a magnifier'});
+const paintCanvas=new PaintingCanvas($('painting'),{paint:fillRegion,preferences,feedbackCanvas:$('paint-feedback'),onViewChange:()=>{if(!$('paint-view').hidden)queueSave();},onZoom:z=>$('zoom-label').textContent=`${Math.round(z*100)}%`,onFocus:()=>{$('fill-found').hidden=false;},onAim:aiming=>$('canvas-note').textContent=aiming?'Move to aim. Lift to color.':'Pinch to explore · Hold for a magnifier'});
 document.body.classList.toggle('contrast',!!preferences.contrast);
 
 function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4200);}
@@ -46,7 +46,7 @@ function renderGallery(){
   $('studio-stats').hidden=!studio;
   if(studio)$('studio-stats').innerHTML=`<div><strong>${cards.length}</strong><span>pictures started</span></div><div><strong>${cards.filter(c=>c.done===c.total).length}</strong><span>little masterpieces</span></div><div><strong>${cards.reduce((s,c)=>s+c.done,0).toLocaleString()}</strong><span>spaces brought to life</span></div>`;
   $('picture-grid').innerHTML=items.map(a=>{
-    const c=cardMap.get(a.id),done=c?Math.round(c.done/c.total*100):0,available=isPaintingAvailable(a.id);
+    const c=cardMap.get(a.id),done=c?progressPercent(c.done,c.total):0,available=isPaintingAvailable(a.id);
     // Sources are generated locally or validated during backup import.
     const source=!studio&&!a.custom?thumbnailURL(a):(c?.thumbnail||a.thumbnail||thumbnailURL(a));
     return `<article class="picture-card ${available?'':'coming-soon'}"><div class="picture-image"><button ${available?`data-open="${escapeHTML(a.id)}"`:'disabled'} aria-label="${available?(c?'Resume':'Color'):'Coming soon:'} ${escapeHTML(a.title)}"><img src="${escapeHTML(source)}" alt="${escapeHTML(a.description||a.title)}" loading="lazy">${available?`<span class="image-overlay"><span>${c?'Keep coloring':'Start coloring'} ${icon('arrow')}</span></span>`:'<span class="coming-soon-label">Coming soon</span>'}</button>${available?`<button class="favorite-button ${favorites.has(a.id)?'active':''}" data-favorite="${escapeHTML(a.id)}" aria-label="${favorites.has(a.id)?'Unfavorite':'Favorite'} ${escapeHTML(a.title)}" aria-pressed="${favorites.has(a.id)}">${icon('heart')}</button>`:''}${c&&available?`<span class="card-progress">${done===100?'✓ Complete':`${done}% · Keep going`}</span>`:''}</div><h3 class="picture-title">${escapeHTML(a.title)}</h3><div class="picture-meta"><span>${escapeHTML(a.category)}</span><span>${available?(c?`${c.total.toLocaleString()} spaces`:a.difficulty||'Your own creation'):'Coming soon'}</span></div></article>`;
@@ -57,7 +57,7 @@ function renderGallery(){
 
 function convert(image,options,onProgress){
   return new Promise((resolve,reject)=>{
-    const worker=new Worker(new URL('./worker.js?v=20261115-flow-1',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
+    const worker=new Worker(new URL('./worker.js?v=20261117-play-1',import.meta.url),{type:'module'});creator.worker=worker;creator.reject=reject;
     const max=options.resolution||360,scale=max/Math.max(image.naturalWidth||image.width,image.naturalHeight||image.height),c=document.createElement('canvas');
     c.width=Math.max(1,Math.round((image.naturalWidth||image.width)*scale));c.height=Math.max(1,Math.round((image.naturalHeight||image.height)*scale));
     const ctx=c.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(image,0,0,c.width,c.height);const data=ctx.getImageData(0,0,c.width,c.height);
@@ -90,40 +90,59 @@ async function openPainting(id){
 }
 function activatePainting(record){
   if(!record.puzzle.geometryVersion||record.puzzle.geometryVersion<3)repairGeometry(record.puzzle);
-  active=record;filled=new Set(record.filled||[]);selected=Math.max(0,Math.min(record.puzzle.palette.length-1,record.selected||0));({history,redo}=paintingHistory(record));thumbnailKey=null;completedShown=filled.size===record.puzzle.regions.length;
+  active=record;filled=new Set(record.filled||[]);selected=Math.max(0,Math.min(record.puzzle.palette.length-1,record.selected||0));({history,redo}=paintingHistory(record));thumbnailKey=null;hideCelebration();completedShown=filled.size===record.puzzle.regions.length;
   $('library-view').hidden=true;$('paint-view').hidden=false;document.body.style.overflow='hidden';$('painting-title').textContent=record.title;$('save-status').textContent=storageOK?'Saving on this device…':'Saving unavailable · export a backup';
   paintCanvas.load(record.puzzle,filled,record.view);paintCanvas.selected=selected;$('reference-toggle').setAttribute('aria-pressed','false');$('reference-toggle').textContent='Preview';$('canvas-stage').classList.remove('reference');$('fill-found').hidden=true;
   $('canvas-note').textContent='Find the checkered spaces · Pinch to zoom · Hold to magnify';paintCanvas.dragMode=false;$('pan-tool').setAttribute('aria-pressed','false');$('canvas-stage').classList.remove('moving');
   const {remaining}=counts();if(!remaining[selected])selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;
-  updateFavorite();updatePainting();queueSave();scrollSelectedColor();$('painting').focus({preventScroll:true});clearTimeout(toastTimer);$('toast').hidden=true;
+  buildPalette();updateFavorite();updatePainting();queueSave();scrollSelectedColor();$('painting').focus({preventScroll:true});clearTimeout(toastTimer);$('toast').hidden=true;
 }
-function counts(){const totals=new Array(active.puzzle.palette.length).fill(0),remaining=totals.slice();active.puzzle.regions.forEach((r,i)=>{totals[r.color]++;if(!filled.has(i))remaining[r.color]++;});return{totals,remaining};}
-function scrollSelectedColor(){requestAnimationFrame(()=>$('palette').querySelector(`[data-color="${selected}"]`)?.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'}));}
+function counts(){return colorProgress(active.puzzle,filled);}
+function buildPalette(){
+  $('palette').innerHTML=active.puzzle.palette.map((c,i)=>`<button class="color-swatch" style="--swatch:${rgb(c)};--text:${c[0]*.299+c[1]*.587+c[2]*.114>148?'#293d38':'#fffdf7'}" data-color="${i}" aria-pressed="false"><span>${i+1}</span></button>`).join('');
+}
+let celebrationTimer;
+function hideCelebration(){clearTimeout(celebrationTimer);$('color-celebration').hidden=true;}
+function celebrateColor(color,progress){
+  const message=colorCompletionMessage(progress,color);if(!message)return;
+  $('color-celebration').textContent=`✓ ${message}`;$('color-celebration').hidden=false;
+  celebrationTimer=setTimeout(hideCelebration,2400);
+}
+function scrollSelectedColor(behavior=paintCanvas.reducedMotion?.matches?'auto':'smooth'){requestAnimationFrame(()=>$('palette').querySelector(`[data-color="${selected}"]`)?.scrollIntoView({block:'nearest',inline:'nearest',behavior}));}
 function chooseColor(color){if(!active)return;selected=color;paintCanvas.selected=color;paintCanvas.focused=-1;$('fill-found').hidden=true;$('canvas-note').textContent='Find the checkered spaces · Pinch to zoom · Hold to magnify';updatePainting();queueSave();}
 function updatePainting(){
-  if(!active)return;const {remaining}=counts(),total=active.puzzle.regions.length,percent=Math.round(filled.size/total*100);
-  $('progress-percent').innerHTML=`${percent}<span>%</span>`;$('progress-fill').style.width=`${filled.size/total*100}%`;$('progress-count').textContent=`${filled.size.toLocaleString()} of ${total.toLocaleString()} spaces colored`;$('color-count').textContent=`${remaining.length} colors`;
+  if(!active)return;const {totals,remaining,fractions,completed}=counts(),total=active.puzzle.regions.length,percent=progressPercent(filled.size,total);
+  $('progress-percent').innerHTML=`${percent}<span>%</span>`;$('progress-fill').style.width=`${filled.size/total*100}%`;$('progress-count').textContent=`${filled.size.toLocaleString()} of ${total.toLocaleString()} spaces colored`;$('color-count').textContent=`${remaining.length} colors`;$('colors-finished').textContent=`${completed}/${remaining.length} colors`;
   $('palette-instruction').textContent=remaining[selected]?`Color ${selected+1} · ${remaining[selected]} to find`:`Color ${selected+1} complete`;
-  const focused=document.activeElement?.dataset.color;
-  $('palette').innerHTML=active.puzzle.palette.map((c,i)=>`<button class="color-swatch ${remaining[i]===0?'complete':''}" style="--swatch:${rgb(c)};--text:${c[0]*.299+c[1]*.587+c[2]*.114>148?'#293d38':'#fffdf7'}" data-color="${i}" aria-label="Color ${i+1}, ${remaining[i]} areas remaining" aria-pressed="${selected===i}">${i+1}${remaining[i]?`<span class="swatch-remaining" aria-hidden="true">${remaining[i]}</span>`:''}</button>`).join('');
-  if(focused!==undefined)$('palette').querySelector(`[data-color="${focused}"]`)?.focus({preventScroll:true});
+  // Keep the buttons themselves: filling must not reset horizontal scroll or keyboard focus.
+  [...$('palette').children].forEach((button,i)=>{
+    button.classList.toggle('complete',remaining[i]===0);
+    button.style.setProperty('--color-progress',`${fractions[i]*360}deg`);
+    button.setAttribute('aria-pressed',String(selected===i));
+    button.setAttribute('aria-label',`Color ${i+1}, ${remaining[i]} areas remaining, ${totals[i]-remaining[i]} of ${totals[i]} colored`);
+  });
   $('undo').disabled=!history.length;$('redo').disabled=!redo.length;$('hint').disabled=filled.size===total||paintCanvas.reference;$('fill-found').disabled=paintCanvas.reference;
   $('painting').setAttribute('aria-label',`${active.title}. ${percent} percent complete. Color ${selected+1} selected. ${remaining[selected]} spaces remaining for this color. Use Find an area, then Fill found area, to paint with the keyboard.`);
   paintCanvas.schedule();
 }
 let audio;
 function playTone(){if(!preferences.sound)return;try{audio ||= new(window.AudioContext||window.webkitAudioContext)();void audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=440+(selected%8)*55;g.gain.setValueAtTime(.035,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.16);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+.17);}catch{}}
-function fillRegion(id){
+function fillRegion(id,point){
   if(!active||paintCanvas.reference||filled.has(id))return;const r=active.puzzle.regions[id];if(!r)return;
   if(r.color!==selected){$('canvas-note').textContent=`This space is color ${r.color+1}. Choose ${r.color+1} in your palette.`;return;}
-  filled.add(id);history.push({id,color:selected});redo=[];paintCanvas.focused=-1;$('fill-found').hidden=true;playTone();$('canvas-note').textContent='A little more color. A little more calm.';
-  const {remaining}=counts();if(!remaining[selected]&&preferences.autoAdvance){selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;scrollSelectedColor();$('canvas-note').textContent=remaining[selected]?`Next up: color ${selected+1}. Look for its checkered spaces.`:'Every space is colored. Beautifully done.';}
+  hideCelebration();filled.add(id);paintCanvas.revealFill(id,point);history.push({id,color:selected});redo=[];paintCanvas.focused=-1;$('fill-found').hidden=true;playTone();$('canvas-note').textContent='A little more color. A little more calm.';
+  const progress=counts(),{remaining}=progress,finishedColor=selected;if(!remaining[selected])celebrateColor(selected,progress);if(!remaining[selected]&&preferences.autoAdvance){selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;scrollSelectedColor();$('canvas-note').textContent=remaining[selected]?`Next up: color ${selected+1}. Look for its checkered spaces.`:'Every space is colored. Beautifully done.';}
+  if(!remaining[finishedColor])$('canvas-note').textContent=colorCompletionMessage(progress,finishedColor)+(remaining[selected]?` · Next: color ${selected+1}`:'');
   updatePainting();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}
 }
-function undoFill(){const change=history.pop();if(!change)return;filled.delete(change.id);redo.push(change);selected=change.color;paintCanvas.selected=selected;paintCanvas.focused=-1;$('fill-found').hidden=true;completedShown=false;updatePainting();scrollSelectedColor();queueSave();}
-function redoFill(){const change=redo.pop();if(!change)return;filled.add(change.id);history.push(change);selected=change.color;const {remaining}=counts();if(!remaining[selected]&&preferences.autoAdvance)selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;paintCanvas.focused=-1;$('fill-found').hidden=true;updatePainting();scrollSelectedColor();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}}
-function hint(){if(!active||paintCanvas.reference)return;let candidates=active.puzzle.regions.map((r,id)=>({...r,id})).filter(r=>!filled.has(r.id)&&r.color===selected);if(!candidates.length){const next=active.puzzle.regions.findIndex((r,id)=>!filled.has(id));if(next<0)return;chooseColor(active.puzzle.regions[next].color);candidates=active.puzzle.regions.map((r,id)=>({...r,id})).filter(r=>!filled.has(r.id)&&r.color===selected);}
-  const logical=paintCanvas.logical({x:paintCanvas.w/2,y:paintCanvas.h/2});candidates.sort((a,b)=>Math.hypot(a.x-logical.x,a.y-logical.y)-Math.hypot(b.x-logical.x,b.y-logical.y));paintCanvas.focusRegion(candidates[0].id);$('canvas-note').textContent=`Here’s a space for color ${selected+1}. Tap it, or choose Fill found area.`;
+function undoFill(){const change=history.pop();if(!change)return;paintCanvas.clearFeedback();hideCelebration();filled.delete(change.id);redo.push(change);selected=change.color;paintCanvas.selected=selected;paintCanvas.focused=-1;$('fill-found').hidden=true;completedShown=false;$('canvas-note').textContent=`Undid a space for color ${selected+1}.`;updatePainting();scrollSelectedColor();queueSave();}
+function redoFill(){const change=redo.pop();if(!change)return;paintCanvas.clearFeedback();hideCelebration();filled.add(change.id);history.push(change);selected=change.color;const {remaining}=counts();if(!remaining[selected]&&preferences.autoAdvance)selected=nextUnfinishedColor(remaining,selected);paintCanvas.selected=selected;paintCanvas.focused=-1;$('fill-found').hidden=true;$('canvas-note').textContent=`Restored a space for color ${change.color+1}.`;updatePainting();scrollSelectedColor();queueSave();if(filled.size===active.puzzle.regions.length&&!completedShown){completedShown=true;setTimeout(showCompletion,400);}}
+function hint(){
+  if(!active||paintCanvas.reference)return;
+  let target=findHint(active.puzzle,filled,selected,paintCanvas.viewport(),paintCanvas.focused);
+  if(!target){const next=active.puzzle.regions.findIndex((r,id)=>!filled.has(id));if(next<0)return;chooseColor(active.puzzle.regions[next].color);target=findHint(active.puzzle,filled,selected,paintCanvas.viewport());}
+  if(!target)return;paintCanvas.focusRegion(target.id,target);
+  $('canvas-note').textContent=`Outlined a space for color ${selected+1}. Tap it to color, or find another.`;
 }
 function queueSave(){clearTimeout(saveTimer);if(!active)return;dirty=true;saveRevision++;$('save-status').textContent='Saving…';saveTimer=setTimeout(()=>void saveNow(),350);}
 async function saveNow(){
@@ -135,13 +154,13 @@ async function saveNow(){
   try{await saveChain;storageOK=true;if(active?.id===record.id&&revision===saveRevision){dirty=false;$('save-status').textContent='✓ Saved on this device';}const c={id:record.id,title:record.title,category:record.category,custom:record.custom,thumbnail:record.thumbnail,updated:record.updated,total:record.puzzle.regions.length,done:record.filled.length};cards=[...cards.filter(a=>a.id!==record.id),c];}
   catch{storageOK=false;$('save-status').textContent='Saving unavailable · export a backup';toast('Your browser could not save this painting. Export a backup before leaving.');}
 }
-async function returnToLibrary(){await saveNow();$('paint-view').hidden=true;$('library-view').hidden=false;document.body.style.overflow='';renderGallery();}
+async function returnToLibrary(){paintCanvas.clearFeedback();hideCelebration();await saveNow();$('paint-view').hidden=true;$('library-view').hidden=false;document.body.style.overflow='';renderGallery();}
 function utility(title,html){$('utility-title').textContent=title;$('utility-content').innerHTML=html;if(!$('utility-dialog').open)$('utility-dialog').showModal();}
-function help(){utility('One color at a time.',`<p>Welcome to your own little corner of calm.</p><ol class="help-steps"><li>Start with An alpine retreat. More pictures and photo creation are coming soon.</li><li>Pick a numbered color. Look for its checkered spaces.</li><li>Tap a matching space to fill it. There’s no penalty for a missed tap.</li><li>Pinch with two fingers to zoom up to 40×. Move with two fingers, or turn on the hand tool.</li><li>Hold a finger still on the picture to open a magnifier. Slide to aim and lift to color. A second finger cancels aiming and starts a pinch.</li><li>Use <strong>Find an area</strong> for tiny spaces. Keyboard players can then press Enter or choose <strong>Fill found area</strong>.</li></ol><p><strong>Keyboard:</strong> H finds an area, +/− zoom, 0 fits the canvas, Ctrl/⌘ Z undoes, and Shift Ctrl/⌘ Z redoes.</p><h3>Keep your quiet corner close.</h3><p>On iPad, open this page in Safari, tap Share, then Add to Home Screen. Pictures you have opened and the local photo converter are available offline. Open a picture online once before taking it offline. AI creation needs an internet connection.</p><p class="backup-note">Progress and personal pictures stay in this browser on this device. Export a studio backup to move them to another device or keep a safe copy.</p><button class="outline-button" data-action="backup">Back up my studio ${icon('download')}</button>`);}
+function help(){utility('One color at a time.',`<p>Welcome to your own little corner of calm.</p><ol class="help-steps"><li>Start with An alpine retreat. More pictures and photo creation are coming soon.</li><li>Pick a numbered color. Look for its checkered spaces.</li><li>Tap a matching space to fill it. There’s no penalty for a missed tap.</li><li>Pinch with two fingers to zoom up to 40×. Move with two fingers, or turn on the hand tool.</li><li>Hold a finger still on the picture to open a magnifier. Slide to aim and lift to color. A second finger cancels aiming and starts a pinch.</li><li>The ring around each color fills as you paint. A check means that color is complete.</li><li>Use <strong>Find an area</strong> for a nearby space. Tap it again for another; comfortable spaces already on screen keep your view in place. Keyboard players can then press Enter or choose <strong>Fill found area</strong>.</li></ol><p><strong>Keyboard:</strong> H finds an area, +/− zoom, 0 fits the canvas, Ctrl/⌘ Z undoes, and Shift Ctrl/⌘ Z redoes.</p><h3>Keep your quiet corner close.</h3><p>On iPad, open this page in Safari, tap Share, then Add to Home Screen. Pictures you have opened and the local photo converter are available offline. Open a picture online once before taking it offline. AI creation needs an internet connection.</p><p class="backup-note">Progress and personal pictures stay in this browser on this device. Export a studio backup to move them to another device or keep a safe copy.</p><button class="outline-button" data-action="backup">Back up my studio ${icon('download')}</button>`);}
 function settings(){utility('Make yourself comfortable.',[
   ['autoAdvance','Keep the colors flowing','Move to the next color when one is finished.'],['highlight','Checkered spaces','Show a checker pattern inside the selected color’s spaces.'],['magnifier','Precision magnifier','Hold on the picture, slide to aim, then lift to color.'],['numbers','Show the numbers','Small numbers appear as you zoom into smaller spaces.'],['contrast','A little more contrast','Darker outlines and more readable labels.'],['sound','A soft note','A quiet sound for every space you color.']
 ].map(([key,title,note])=>`<label class="setting-row"><span>${title}<small>${note}</small></span><input type="checkbox" data-setting="${key}" ${preferences[key]?'checked':''}></label>`).join('')+`${active?.previousEditionId?'<button class="outline-button" data-action="previous-backup">Download my previous painting</button>':''}<p>Your changes save automatically on this device.</p><button class="outline-button" data-action="help">How to play</button><button class="text-button danger-button" data-action="restart">Start this picture over</button>${active?.custom?'<br><button class="text-button danger-button" data-action="delete">Delete this personal picture</button>':''}`);}
-function showCompletion(){if(!active||filled.size!==active.puzzle.regions.length)return;utility('You made something beautiful.',`<div class="completion-art">✳</div><div class="completion-copy"><h3>${escapeHTML(active.title)}</h3><p>${active.puzzle.regions.length.toLocaleString()} little spaces. One lovely picture.<br>Take a moment. This one’s yours.</p></div><button class="primary" data-action="download-finished">Save my finished picture ${icon('download')}</button><button class="outline-button" data-action="export">More ways to keep it</button><button class="outline-button" data-action="library">Find another little escape ${icon('arrow')}</button>`);}
+function showCompletion(){if(!active||filled.size!==active.puzzle.regions.length)return;utility('You made something beautiful.',`<img class="completion-preview" src="${previewURL(active.puzzle,filled,true,380,{paths:paintCanvas.paths,outline:paintCanvas.outline})}" alt="Your completed ${escapeHTML(active.title)}"><div class="completion-copy"><h3>${escapeHTML(active.title)}</h3><p>${active.puzzle.regions.length.toLocaleString()} little spaces. One lovely picture.<br>Take a moment. This one’s yours.</p></div><button class="primary" data-action="download-finished">Save my finished picture ${icon('download')}</button><button class="outline-button" data-action="export">More ways to keep it</button><button class="outline-button" data-action="library">Find another little escape ${icon('arrow')}</button>`);}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
 const filename=()=>active?.title.replace(/[^a-z0-9]+/gi,'-').toLowerCase()||'my-painting';
 function exportPNG(finished=false){if(!active)return;const c=document.createElement('canvas'),s=2400/Math.max(active.puzzle.width,active.puzzle.height);c.width=Math.round(active.puzzle.width*s);c.height=Math.round(active.puzzle.height*s);const ctx=c.getContext('2d');ctx.scale(s,s);drawPuzzle(ctx,active.puzzle,filled,{scale:s,numbers:!finished,reference:finished});c.toBlob(blob=>{if(blob)download(blob,`${filename()}${finished?'-finished':''}.png`);else toast('Your browser could not export this picture.');},'image/png');}
@@ -240,12 +259,15 @@ document.addEventListener('click',async e=>{
     case 'discover':setView('discover');break;case 'download-current':exportPNG(false);break;case 'download-finished':exportPNG(true);break;case 'printable':exportPrintable();break;case 'painting-backup':void exportBackup(true);break;case 'studio-backup':void exportBackup();break;case 'restore':$('backup-input').click();break;
     case 'library':$('utility-dialog').close();void returnToLibrary();break;
     case 'restart':utility('A fresh beginning?',`<p>Your current progress for this picture will be cleared. Export a backup first if you would like to keep it.</p><button class="primary" data-action="confirm-restart">Start over</button><button class="outline-button" data-action="settings">Keep my progress</button>`);break;
-    case 'confirm-restart':filled.clear();history=[];redo=[];completedShown=false;paintCanvas.focused=-1;updatePainting();queueSave();$('utility-dialog').close();break;
+    case 'confirm-restart':paintCanvas.clearFeedback();hideCelebration();filled.clear();history=[];redo=[];completedShown=false;paintCanvas.focused=-1;updatePainting();queueSave();$('utility-dialog').close();break;
     case 'delete':utility('Let this picture go?',`<p>This removes the personal picture and its progress from this browser. You can export a backup before deleting it.</p><button class="primary" data-action="confirm-delete">Delete this picture</button><button class="outline-button" data-action="settings">Keep this picture</button>`);break;
     case 'confirm-delete':if(active?.custom){clearTimeout(saveTimer);await saveChain.catch(()=>{});await deletePainting(active.id);favorites.delete(active.id);persistPreferences();active=null;$('utility-dialog').close();$('paint-view').hidden=true;$('library-view').hidden=false;document.body.style.overflow='';await refreshCards();setView('studio');toast('Picture removed from this studio.');}break;
   }
 });
 document.addEventListener('change',e=>{const key=e.target.dataset.setting;if(key){preferences[key]=e.target.checked;persistPreferences();document.body.classList.toggle('contrast',!!preferences.contrast);paintCanvas.schedule();}});
+let paletteWidth=0;
+const paletteResizeObserver=new ResizeObserver(([entry])=>{const width=entry.contentRect.width;if(width&&width!==paletteWidth){paletteWidth=width;if(active&&!$('paint-view').hidden)scrollSelectedColor('auto');}});
+paletteResizeObserver.observe($('palette'));
 $('search').addEventListener('input',renderGallery);
 $('featured-start').onclick=()=>void openPainting(previewPaintingId);$('feature-art').src=artURL(catalog[0]);
 if(singlePicturePreview){for(const button of document.querySelectorAll('[data-action="upload"],[data-action="ai"]')){button.disabled=true;button.title='Coming soon';button.setAttribute('aria-label',`${button.getAttribute('aria-label')||button.textContent.trim()} · Coming soon`);}document.querySelector('.create-banner').hidden=true;document.querySelector('.new-tag').textContent='SOON';}
@@ -253,7 +275,7 @@ $('back-library').onclick=()=>void returnToLibrary();$('paint-favorite').onclick
 $('zoom-in').onclick=()=>paintCanvas.zoomAt(paintCanvas.zoom*1.5);$('zoom-out').onclick=()=>paintCanvas.zoomAt(paintCanvas.zoom/1.5);$('zoom-fit').onclick=()=>paintCanvas.fit();
 $('pan-tool').onclick=()=>{paintCanvas.dragMode=!paintCanvas.dragMode;$('pan-tool').setAttribute('aria-pressed',String(paintCanvas.dragMode));$('canvas-stage').classList.toggle('moving',paintCanvas.dragMode);};
 $('undo').onclick=undoFill;$('redo').onclick=redoFill;$('hint').onclick=hint;$('fill-found').onclick=()=>{if(paintCanvas.focused>=0)fillRegion(paintCanvas.focused);};
-$('reference-toggle').onclick=()=>{paintCanvas.reference=!paintCanvas.reference;$('reference-toggle').setAttribute('aria-pressed',String(paintCanvas.reference));$('reference-toggle').textContent=paintCanvas.reference?'Back to painting':'Preview';$('canvas-stage').classList.toggle('reference',paintCanvas.reference);updatePainting();};
+$('reference-toggle').onclick=()=>{paintCanvas.clearFeedback();hideCelebration();paintCanvas.reference=!paintCanvas.reference;$('reference-toggle').setAttribute('aria-pressed',String(paintCanvas.reference));$('reference-toggle').textContent=paintCanvas.reference?'Back to painting':'Preview';$('canvas-stage').classList.toggle('reference',paintCanvas.reference);updatePainting();};
 $('close-utility').onclick=()=>$('utility-dialog').close();$('close-create').onclick=()=>{cancelCreation();$('create-dialog').close();};$('create-dialog').addEventListener('cancel',cancelCreation);
 $('photo-input').onchange=e=>void choosePhoto(e.target.files[0]);$('replace-photo').onclick=()=>$('photo-input').click();
 for(const event of ['dragenter','dragover'])$('drop-zone').addEventListener(event,e=>{e.preventDefault();$('drop-zone').classList.add('dragging');});
@@ -267,4 +289,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&active)voi
 window.addEventListener('beforeunload',e=>{if(active&&(!storageOK||dirty)){e.preventDefault();e.returnValue='';}});
 void refreshCards();
 void apiJSON('/config').then(config=>{aiAvailable=!!config.enabled;}).catch(()=>{aiAvailable=null;});
-if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261115-flow-1').catch(()=>{});});
+if('serviceWorker'in navigator)window.addEventListener('load',()=>{void navigator.serviceWorker.register('./sw.js?v=20261117-play-1').catch(()=>{});});

@@ -1,4 +1,4 @@
-import {pointInRegion} from './engine.js?v=20261115-flow-1';
+import {pointInRegion} from './engine.js?v=20261117-play-1';
 export const rgb=c=>`rgb(${c.join(',')})`;
 export function appendCommands(path,commands){for(const c of commands){if(c[0]==='M')path.moveTo(c[1],c[2]);else if(c[0]==='Q')path.quadraticCurveTo(c[1],c[2],c[3],c[4]);else path.lineTo(c[1],c[2]);}}
 export const svgCommands=commands=>commands.map(c=>c[0]+c.slice(1).join(' ')).join('');
@@ -65,8 +65,11 @@ export function drawPuzzle(ctx,puzzle,filled,{scale=1,selected=-1,numbers=true,r
 export function previewURL(puzzle,filled=new Set(),reference=false,size=380,geometry={}){const c=document.createElement('canvas');const s=size/Math.max(puzzle.width,puzzle.height);c.width=Math.round(puzzle.width*s);c.height=Math.round(puzzle.height*s);const ctx=c.getContext('2d');ctx.scale(s,s);drawPuzzle(ctx,puzzle,filled,{scale:s,reference,numbers:!reference,...geometry});return c.toDataURL('image/png');}
 
 export class PaintingCanvas {
-  constructor(canvas,{paint,onZoom,onFocus,onAim,onViewChange,preferences}){
+  constructor(canvas,{paint,onZoom,onFocus,onAim,onViewChange,preferences,feedbackCanvas}){
     this.canvas=canvas;this.ctx=canvas.getContext('2d');this.paint=paint;this.onZoom=onZoom;this.onFocus=onFocus;this.preferences=preferences;this.pointers=new Map();this.zoom=1;this.pan={x:0,y:0};this.dragMode=false;this.focused=-1;this.selected=0;this.reference=false;this.ready=false;this.lastTap=0;this.frame=0;
+    this.feedbackCanvas=feedbackCanvas;this.feedbackCtx=feedbackCanvas?.getContext('2d');this.feedback=[];this.feedbackFrame=0;
+    this.reducedMotion=typeof matchMedia==='function'?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
+    this.reducedMotion.addEventListener?.('change',()=>{if(this.reducedMotion.matches)this.clearFeedback();});
     this.onViewChange=onViewChange;this.onAim=onAim;this.aim=null;this.holdTimer=null;
     this.resizeObserver=new ResizeObserver(()=>this.resize());this.resizeObserver.observe(canvas);
     canvas.addEventListener('pointerdown',e=>this.down(e));canvas.addEventListener('pointermove',e=>this.move(e));canvas.addEventListener('pointerup',e=>this.up(e));canvas.addEventListener('pointercancel',e=>this.cancel(e));canvas.addEventListener('lostpointercapture',e=>this.cancel(e));
@@ -74,24 +77,25 @@ export class PaintingCanvas {
     canvas.addEventListener('contextmenu',e=>e.preventDefault());
     canvas.addEventListener('keydown',e=>{if(e.key==='+'||e.key==='='){e.preventDefault();this.zoomAt(this.zoom*1.4);}if(e.key==='-'){e.preventDefault();this.zoomAt(this.zoom/1.4);}if(e.key==='0'){e.preventDefault();this.fit();}if(e.key==='Enter'&&this.focused>=0){e.preventDefault();this.paint(this.focused);}});
   }
-  load(puzzle,filled,view){this.restoring=true;this.cancelAim();this.resetTap();this.base=0;this.zoom=1;this.pan={x:0,y:0};this.puzzle=puzzle;this.filled=filled;this.paths=puzzle.regions.map(regionPath);this.outline=boundaryPath(puzzle);this.focused=-1;this.reference=false;this.ready=true;this.pointers.clear();
+  load(puzzle,filled,view){this.clearFeedback();this.restoring=true;this.cancelAim();this.resetTap();this.base=0;this.zoom=1;this.pan={x:0,y:0};this.puzzle=puzzle;this.filled=filled;this.paths=puzzle.regions.map(regionPath);this.outline=boundaryPath(puzzle);this.focused=-1;this.reference=false;this.ready=true;this.pointers.clear();
     this.hitCells=new Map();puzzle.regions.forEach((r,id)=>{let left=Infinity,top=Infinity,right=-Infinity,bottom=-Infinity;for(const loop of r.paths)for(const [x,y] of loop){left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}const x0=Math.floor((left-.1)/24),x1=Math.floor((right+.1)/24),y0=Math.floor((top-.1)/24),y1=Math.floor((bottom+.1)/24);for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const key=`${x},${y}`;if(!this.hitCells.has(key))this.hitCells.set(key,[]);this.hitCells.get(key).push(id);}});this.resize();this.restoreView(view);this.restoring=false;}
   viewState(){if(!this.ready||!this.base)return undefined;const center=this.logical({x:this.w/2,y:this.h/2});return {zoom:this.zoom,x:center.x/this.puzzle.width,y:center.y/this.puzzle.height};}
   restoreView(view){
+    this.clearFeedback();
     const valid=view&&Number.isFinite(view.zoom)&&view.zoom>=1&&view.zoom<=40&&Number.isFinite(view.x)&&Number.isFinite(view.y)&&view.x>=-.5&&view.x<=1.5&&view.y>=-.5&&view.y<=1.5;
     this.zoom=valid?view.zoom:1;const s=this.base*this.zoom;
     this.pan=valid?{x:(.5-view.x)*this.puzzle.width*s,y:(.5-view.y)*this.puzzle.height*s}:{x:0,y:0};
     this.constrain();this.onZoom?.(this.zoom);this.schedule();
   }
   viewChanged(){if(!this.restoring)this.onViewChange?.();}
-  resize(){const r=this.canvas.getBoundingClientRect();if(!r.width||!r.height)return;const view=this.viewState();this.w=r.width;this.h=r.height;this.dpr=Math.min(devicePixelRatio||1,2.5);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);if(this.ready){this.base=Math.min((this.w-12)/this.puzzle.width,(this.h-12)/this.puzzle.height);this.restoreView(view);}}
+  resize(){const r=this.canvas.getBoundingClientRect();if(!r.width||!r.height)return;const view=this.viewState();this.w=r.width;this.h=r.height;this.dpr=Math.min(devicePixelRatio||1,2.5);this.canvas.width=Math.round(this.w*this.dpr);this.canvas.height=Math.round(this.h*this.dpr);if(this.feedbackCanvas){this.feedbackCanvas.width=this.canvas.width;this.feedbackCanvas.height=this.canvas.height;}if(this.ready){this.base=Math.min((this.w-12)/this.puzzle.width,(this.h-12)/this.puzzle.height);this.restoreView(view);}}
   fit(){if(!this.ready)return;this.resetTap();this.restoreView();this.viewChanged();}
   resetTap(){this.lastTap=0;this.previousTap=null;this.previousRegion=undefined;}
   point(e){const r=this.canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
   origin(){return{x:(this.w-this.puzzle.width*this.base*this.zoom)/2+this.pan.x,y:(this.h-this.puzzle.height*this.base*this.zoom)/2+this.pan.y};}
   logical(p){const o=this.origin(),s=this.base*this.zoom;return{x:(p.x-o.x)/s,y:(p.y-o.y)/s};}
   constrain(){const s=this.base*this.zoom;const limitX=Math.max(0,(this.puzzle.width*s-this.w)/2)+this.w*.22,limitY=Math.max(0,(this.puzzle.height*s-this.h)/2)+this.h*.22;this.pan.x=Math.max(-limitX,Math.min(limitX,this.pan.x));this.pan.y=Math.max(-limitY,Math.min(limitY,this.pan.y));}
-  zoomAt(value,point={x:this.w/2,y:this.h/2}){if(!this.ready)return;const before=this.logical(point);this.zoom=Math.max(1,Math.min(40,value));const o=this.origin(),s=this.base*this.zoom;this.pan.x+=point.x-(o.x+before.x*s);this.pan.y+=point.y-(o.y+before.y*s);this.constrain();this.onZoom?.(this.zoom);this.schedule();this.viewChanged();}
+  zoomAt(value,point={x:this.w/2,y:this.h/2}){if(!this.ready)return;this.clearFeedback();const before=this.logical(point);this.zoom=Math.max(1,Math.min(40,value));const o=this.origin(),s=this.base*this.zoom;this.pan.x+=point.x-(o.x+before.x*s);this.pan.y+=point.y-(o.y+before.y*s);this.constrain();this.onZoom?.(this.zoom);this.schedule();this.viewChanged();}
   hitRegion(point){
     const l=this.logical(point);if(l.x<0||l.y<0||l.x>=this.puzzle.width||l.y>=this.puzzle.height)return -1;
     const candidates=this.hitCells.get(`${Math.floor(l.x/24)},${Math.floor(l.y/24)}`)||[],ctx=this.ctx;
@@ -107,18 +111,55 @@ export class PaintingCanvas {
   move(e){const old=this.pointers.get(e.pointerId);if(!old)return;e.preventDefault();const p=this.point(e);this.pointers.set(e.pointerId,{...old,...p,moved:old.moved||Math.hypot(p.x-old.start.x,p.y-old.start.y)>8});
     if(this.pointers.size>=2){this.cancelAim();const next=this.measure();if(this.gesture&&next&&this.gesture.distance>0){this.pan.x+=next.center.x-this.gesture.center.x;this.pan.y+=next.center.y-this.gesture.center.y;this.zoomAt(this.zoom*next.distance/this.gesture.distance,next.center);}this.gesture=next;this.hadGesture=true;this.schedule();}
     else if(this.aim){this.aim=p;this.schedule();}
-    else{if(Math.hypot(p.x-old.start.x,p.y-old.start.y)>8){this.cancelAim();this.resetTap();}if(this.dragMode||this.zoom>1.03){this.pan.x+=p.x-old.x;this.pan.y+=p.y-old.y;this.constrain();this.schedule();}}
+    else{if(Math.hypot(p.x-old.start.x,p.y-old.start.y)>8){this.cancelAim();this.resetTap();}if(this.dragMode||this.zoom>1.03){this.clearFeedback();this.pan.x+=p.x-old.x;this.pan.y+=p.y-old.y;this.constrain();this.schedule();}}
   }
   up(e){const p=this.pointers.get(e.pointerId);if(!p)return;this.pointers.delete(e.pointerId);
-    if(this.aim&&!this.hadGesture&&!this.reference){const id=this.hitRegion(this.point(e));this.cancelAim();if(id>=0)this.paint(id);this.gesture=this.measure();return;}
+    if(this.aim&&!this.hadGesture&&!this.reference){const id=this.hitRegion(this.point(e));this.cancelAim();if(id>=0)this.paint(id,this.logical(this.point(e)));this.gesture=this.measure();return;}
     this.cancelAim();
     if(!p.moved&&!this.hadGesture&&!this.dragMode&&!this.reference){const now=performance.now(),tap=this.point(e),id=this.hitRegion(tap);
       if(now-this.lastTap<300&&id===this.previousRegion&&this.previousTap&&Math.hypot(tap.x-this.previousTap.x,tap.y-this.previousTap.y)<24){this.zoomAt(this.zoom<3?this.zoom*2.5:1,tap);this.resetTap();}
-      else{if(id>=0)this.paint(id);this.lastTap=now;this.previousTap=tap;this.previousRegion=id;}
+      else{if(id>=0)this.paint(id,this.logical(tap));this.lastTap=now;this.previousTap=tap;this.previousRegion=id;}
     }else this.resetTap();if(!this.pointers.size){this.hadGesture=false;this.viewChanged();}this.gesture=this.measure();}
   cancel(e){if(!this.pointers.has(e.pointerId))return;this.cancelAim();this.resetTap();this.pointers.delete(e.pointerId);this.gesture=this.measure();if(!this.pointers.size){this.hadGesture=false;this.viewChanged();}}
   visibleLabels(){const o=this.origin(),s=this.base*this.zoom;return labelPositions(this.puzzle,this.filled,{scale:s,selected:this.selected,viewport:{x:-o.x/s,y:-o.y/s,width:this.w/s,height:this.h/s}});}
-  focusRegion(id){this.focused=id;const r=this.puzzle.regions[id];this.zoom=Math.max(2,Math.min(35,32/(Math.max(r.radius,1)*this.base)));const s=this.base*this.zoom;this.pan.x=(this.puzzle.width/2-r.x)*s;this.pan.y=(this.puzzle.height/2-r.y)*s;this.onZoom?.(this.zoom);this.onFocus?.(id);this.schedule();this.viewChanged();}
+  viewport(){const o=this.origin(),scale=this.base*this.zoom;return {x:-o.x/scale,y:-o.y/scale,width:this.w/scale,height:this.h/scale,scale};}
+  focusRegion(id,{anchor=this.puzzle.regions[id],keepView=false}={}){
+    this.clearFeedback();this.resetTap();this.focused=id;
+    if(!keepView){
+      this.zoom=Math.max(Math.min(this.zoom,8),Math.min(8,18/(Math.max(anchor.radius,1)*this.base)));
+      const s=this.base*this.zoom,limitX=Math.max(0,(this.puzzle.width*s-this.w)/2),limitY=Math.max(0,(this.puzzle.height*s-this.h)/2);
+      this.pan.x=Math.max(-limitX,Math.min(limitX,(this.puzzle.width/2-anchor.x)*s));this.pan.y=Math.max(-limitY,Math.min(limitY,(this.puzzle.height/2-anchor.y)*s));
+      this.onZoom?.(this.zoom);this.viewChanged();
+    }
+    this.onFocus?.(id);this.schedule();
+  }
+  clearFeedback(){
+    if(this.feedbackFrame)cancelAnimationFrame(this.feedbackFrame);this.feedbackFrame=0;this.feedback=[];
+    if(this.feedbackCtx){this.feedbackCtx.setTransform(1,0,0,1,0,0);this.feedbackCtx.clearRect(0,0,this.feedbackCanvas.width,this.feedbackCanvas.height);}
+  }
+  revealFill(id,point){
+    if(!this.feedbackCtx||this.reducedMotion.matches||this.reference||!this.filled.has(id))return;
+    const r=this.puzzle.regions[id],center=point||{x:r.x,y:r.y};let reach=1;
+    for(const loop of r.paths)for(const [x,y] of loop)reach=Math.max(reach,Math.hypot(x-center.x,y-center.y));
+    this.feedback.push({id,center,reach,start:performance.now()});this.feedback=this.feedback.slice(-8);
+    if(!this.feedbackFrame)this.feedbackFrame=requestAnimationFrame(now=>this.drawFeedback(now));
+  }
+  drawFeedback(now){
+    this.feedbackFrame=0;const ctx=this.feedbackCtx;
+    if(this.reducedMotion.matches||this.reference){this.clearFeedback();return;}
+    ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,this.feedbackCanvas.width,this.feedbackCanvas.height);
+    this.feedback=this.feedback.filter(effect=>now-effect.start<280&&this.filled.has(effect.id));
+    const o=this.origin(),s=this.base*this.zoom;
+    // Animate only the changed shapes on a separate layer, never all 728 regions.
+    for(const effect of this.feedback){
+      const t=Math.max(0,(now-effect.start)/280),radius=Math.max(.1,effect.reach*(1-(1-t)**3)),{x,y}=effect.center;
+      ctx.save();ctx.setTransform(this.dpr*s,0,0,this.dpr*s,this.dpr*o.x,this.dpr*o.y);ctx.clip(this.paths[effect.id],'evenodd');
+      const wash=ctx.createRadialGradient(x,y,0,x,y,radius);wash.addColorStop(0,'#fffefa00');wash.addColorStop(.75,'#fffefa00');wash.addColorStop(1,`rgba(255,254,250,${.95*(1-t)})`);
+      ctx.fillStyle=wash;ctx.fillRect(0,0,this.puzzle.width,this.puzzle.height);
+      ctx.strokeStyle=this.preferences.contrast?'#455143':'#77816f';ctx.lineWidth=(this.preferences.contrast?1.3:1)/s;ctx.stroke(this.paths[effect.id]);ctx.restore();
+    }
+    if(this.feedback.length)this.feedbackFrame=requestAnimationFrame(time=>this.drawFeedback(time));
+  }
   schedule(){if(this.frame)return;this.frame=requestAnimationFrame(()=>{this.frame=0;this.draw();});}
   draw(){if(!this.ready||!this.w||!this.h)return;const ctx=this.ctx,dpr=this.dpr,o=this.origin(),s=this.base*this.zoom;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,this.w,this.h);ctx.save();ctx.translate(o.x,o.y);ctx.scale(s,s);ctx.shadowColor='#2b3d3218';ctx.shadowBlur=12/s;ctx.fillStyle='#fffefa';ctx.fillRect(0,0,this.puzzle.width,this.puzzle.height);ctx.shadowBlur=0;drawPuzzle(ctx,this.puzzle,this.filled,{scale:s,selected:this.selected,highlight:this.preferences.highlight,numbers:this.preferences.numbers,reference:this.reference,contrast:this.preferences.contrast,focused:this.focused,paths:this.paths,outline:this.outline,viewport:{x:-o.x/s,y:-o.y/s,width:this.w/s,height:this.h/s}});ctx.restore();if(this.aim)this.drawMagnifier();}
   drawMagnifier(){
