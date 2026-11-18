@@ -1,141 +1,178 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#071b25">
-  <title>Cozy Search — Johnny's Game Shelf</title>
-  <meta name="description" content="A little discovery. A little magic. Find hidden words in a moonlit observatory and bring your constellation to life.">
-  <link rel="preload" as="image" href="/cozy-search/assets/enchanted-observatory-v1.jpg">
-  <link rel="stylesheet" href="/cozy-search/cozy-search.css?v=cozy-observatory-2026-09-04-clear-letters">
-</head>
-<body>
-  <div class="observatory-world" aria-hidden="true"></div>
-  <div class="world-mist" aria-hidden="true"></div>
-
-  <header class="site-nav">
-    <a class="brand" href="/">justaskjohnny.com</a>
-    <nav class="nav-links" aria-label="Site">
-      <a href="/">Home</a>
-      <details class="games-menu">
-        <summary>Games</summary>
-        <div class="games-panel">
-          <div class="games-heading"><span>Johnny's arcade</span><strong>Pick a world</strong></div>
-          <a href="/crownforge/">Crownforge <small>Build your settlement</small></a>
-          <a href="https://crownforge-oathbound.onrender.com/">Crownforge: Oathbound <small>Single-player RPG</small></a>
-          <a href="/last-star/">Crownforge: Last Star <small>Arcade adventure</small></a>
-          <a href="/cozy-builder-game/">Cozy Builder <small>Town-building game</small></a>
-          <a href="/tetris/">Cozy Falling Blocks <small>Classic block puzzle</small></a>
-          <a class="current" href="/cozy-search/">Cozy Search <small>Word finding game</small></a>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#122b30" />
+    <title>Cozy Search · The Night Atlas</title>
+    <meta
+      name="description"
+      content="Explore six illustrated places in a word search with crossword clues, a hidden final word, and a new shared puzzle every day."
+    />
+    <link rel="stylesheet" href="./atlas.css?v=1" />
+  </head>
+  <body>
+    <header class="masthead">
+      <div class="wrap nav">
+        <a href="/" class="brand"
+          ><span class="star" aria-hidden="true">✷</span> Johnny’s Game Shelf</a
+        >
+        <nav aria-label="Game">
+          <details id="games">
+            <summary>Games</summary>
+            <div class="menu">
+              <a href="/crownforge/">Crownforge</a
+              ><a href="https://crownforge-oathbound.onrender.com/">Oathbound</a
+              ><a href="/last-star/">Last Star</a
+              ><a href="/cozy-builder-game/">Cozy Builder</a
+              ><a href="/tetris/">Cozy Falling Blocks</a>
+            </div>
+          </details>
+          <button id="journal">
+            Field journal <span id="journal-count">0/6</span></button
+          ><button id="settings" aria-label="How to play and settings">
+            ☷ <span>Guide</span>
+          </button>
+        </nav>
+      </div>
+    </header>
+    <main class="wrap">
+      <header class="title-row">
+        <div>
+          <p class="eyebrow"><i></i> THE NIGHT ATLAS</p>
+          <h1>Cozy Search<span>.</span></h1>
         </div>
-      </details>
-    </nav>
-  </header>
-
-  <main class="game-shell">
-    <section class="game-intro">
-      <div>
-        <p class="eyebrow intro-eyebrow"><i aria-hidden="true"></i>The moonlit observatory</p>
-        <h1>Cozy Search <span>✦</span></h1>
-        <p class="lede">A little discovery. A little magic.</p>
-
-      </div>
-      <div class="game-status" aria-live="polite">
-        <span class="status-dot"></span>
-        <span id="status-text">Choose a level and start searching</span>
-      </div>
-    </section>
-
-    <section class="search-card" aria-label="Cozy Search word puzzle">
-      <div class="game-toolbar">
-        <div class="stat-chip stat-found"><span>Found</span><strong id="found-count">0/5</strong><i aria-hidden="true"></i></div>
-        <div class="stat-chip stat-time"><span>Time</span><strong id="timer">00:00</strong><i aria-hidden="true"></i></div>
-        <div class="stat-chip stat-streak"><span>Streak</span><strong id="streak">0</strong><i aria-hidden="true"></i></div>
-        <button id="new-game" class="primary-button" type="button"><span aria-hidden="true">↻</span> New game</button>
-      </div>
-
-      <div class="game-layout">
-        <div class="board-stage">
-          <div class="stage-heading">
-            <div><span class="eyebrow">Your star chart</span><strong id="difficulty-label">Easy glow</strong></div>
-            <div class="stage-readout">
-              <span id="board-hint">Drag a line or tap two letters</span>
-              <div id="field-meter" class="field-meter" role="img" aria-label="0 percent of words charted">
-                <span><i id="field-meter-fill"></i></span><b id="field-meter-label">0% charted</b>
-              </div>
-            </div>
-          </div>
-          <div class="sky-map" role="img" aria-label="0 of 5 constellation stars lit">
-            <span class="sky-map-label">Your constellation <b id="sky-count">0 / 5</b></span>
-            <canvas id="observatory-sky" aria-hidden="true"></canvas>
-          </div>
-          <div class="grid-wrap">
-            <div id="word-grid" class="word-grid" role="grid" aria-label="Cozy Search puzzle grid"></div>
-          </div>
-          <canvas id="bloom-canvas" aria-hidden="true"></canvas>
-          <div class="bloom-caption" aria-hidden="true"><span id="bloom-kicker">Beautifully found</span><strong id="bloom-word"></strong></div>
-          <div class="stage-footer"><span id="puzzle-code">Puzzle 001</span><span><i></i>Every word lights a star</span></div>
+        <div class="modes" aria-label="Puzzle mode">
+          <button id="free" aria-pressed="true">Free play</button
+          ><button id="daily" aria-pressed="false">Daily edition</button>
         </div>
-
-        <aside class="side-panel">
-          <section class="panel-card words-card" aria-labelledby="words-title">
-            <div class="panel-heading">
-              <span class="eyebrow">A little guidance</span>
-              <strong id="words-title">Hidden words</strong>
-              <span id="words-left" class="panel-count">5 left</span>
-              <button id="word-list-toggle" class="panel-toggle" type="button" aria-expanded="false" aria-controls="word-list-content">
-                <span class="toggle-label">Show list</span><span class="toggle-icon" aria-hidden="true">＋</span>
-              </button>
-            </div>
-            <div id="word-list-content" class="word-list-content" hidden>
-              <div class="list-progress" aria-label="Search progress">
-                <div class="list-progress-heading"><span class="eyebrow">Words discovered</span><strong id="words-progress-label">0%</strong></div>
-                <div class="progress-track"><span id="words-progress-fill"></span></div>
-              </div>
-              <ul id="word-list" class="word-list" aria-live="polite"></ul>
-              <p class="panel-copy">Words can run across, down, or diagonally. Can&apos;t find one? Tap its name to reveal the path.</p>
-            </div>
-          </section>
-
-          <section class="panel-card difficulty-card" aria-labelledby="difficulty-title">
-            <div class="panel-heading"><span class="eyebrow">Choose your pace</span><strong id="difficulty-title">Difficulty</strong></div>
-            <div id="difficulty-controls" class="difficulty-controls" role="group" aria-label="Difficulty">
-              <button type="button" data-difficulty="easy" aria-pressed="true"><b>Easy</b><small>5 words</small></button>
-              <button type="button" data-difficulty="casual" aria-pressed="false"><b>Casual</b><small>6 words</small></button>
-              <button type="button" data-difficulty="tricky" aria-pressed="false"><b>Tricky</b><small>8 words</small></button>
-              <button type="button" data-difficulty="hard" aria-pressed="false"><b>Hard</b><small>10 words</small></button>
-              <button type="button" data-difficulty="very-hard" aria-pressed="false"><b>Very hard</b><small>30 words</small></button>
-            </div>
-            <p id="difficulty-copy" class="panel-copy">A soft landing with clear paths.</p>
-          </section>
-
-          <section class="panel-card music-card" aria-labelledby="music-title">
-            <div class="panel-heading"><span class="eyebrow">Set the atmosphere</span><strong id="music-title">Soundtrack</strong></div>
-            <label class="select-wrap" for="soundtrack-select">
-              <span class="sr-only">Choose a soundtrack</span>
-              <select id="soundtrack-select" aria-label="Soundtrack">
-                <option value="cozy">Johnny's Cozy Theme</option>
-                <option value="dreamy-clouds">Dreamy Clouds</option>
-                <option value="neon-dreams">Neon Dreams</option>
-                <option value="whimsical-waltz">Whimsical Waltz</option>
-                <option value="crownforge-rp">Johnny's RP</option>
-                <option value="nocturnal-calm">Nocturnal Calm</option>
-                <option value="loop-all">Loop All</option>
+      </header>
+      <section class="edition" aria-labelledby="edition-name">
+        <div class="edition-copy">
+          <div class="eyebrow" id="edition-type">FIELD EDITION</div>
+          <h2 id="edition-name"></h2>
+          <p id="edition-note"></p>
+        </div>
+        <div id="hero-art" class="hero-art" aria-hidden="true"></div>
+      </section>
+      <div class="play-layout">
+        <section class="board-panel" aria-label="Letter board">
+          <div class="section-top">
+            <div class="board-meta">
+              <label for="level">Level</label
+              ><select id="level">
+                <option value="easy">Easy</option>
+                <option value="casual">Casual</option>
+                <option value="tricky">Tricky</option>
+                <option value="hard">Hard</option>
+                <option value="expert">Very hard</option>
               </select>
-            </label>
-            <button id="music-button" class="music-button" type="button" aria-pressed="false"><span id="music-button-label">Music: off</span><span class="music-bars" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></button>
+            </div>
+            <button id="new" class="text-action">
+              <span aria-hidden="true">↻</span> New puzzle
+            </button>
+          </div>
+          <div id="pocket">
+            <b id="pocket-label"></b><span id="pocket-entry"></span
+            ><button id="pocket-next" aria-label="Show next target">›</button>
+          </div>
+          <div class="paper">
+            <div class="paper-meta">
+              <span id="direction"></span
+              ><span id="timer" aria-label="Time playing">0:00</span>
+            </div>
+            <div
+              id="board"
+              role="grid"
+              aria-label="Letter grid"
+              aria-describedby="board-tip"
+            ></div>
+            <div class="paper-foot">
+              <span id="coordinates"></span><span aria-hidden="true">✴</span
+              ><span id="board-size"></span>
+            </div>
+          </div>
+          <p class="board-tip" id="board-tip">
+            Drag through a word or tap its two ends.
+          </p>
+        </section>
+        <aside aria-label="Puzzle guide">
+          <section class="guide-panel">
+            <div class="guide-heading">
+              <h2 id="list-heading">Word list</h2>
+              <svg id="sky" viewBox="0 0 101 30" aria-hidden="true"></svg
+              ><span id="found-count"></span>
+            </div>
+            <div class="progress"><i id="progress"></i></div>
+            <div class="guide-options" aria-label="Word guide">
+              <button id="words-mode" aria-pressed="true">Words</button
+              ><button id="clues-mode" aria-pressed="false">Clues</button>
+            </div>
+            <ul id="words" aria-labelledby="list-heading"></ul>
+            <section class="mystery" id="mystery">
+              <div class="mystery-icon" aria-hidden="true">✧</div>
+              <div>
+                <h3>Final mystery</h3>
+                <p id="mystery-copy"></p>
+                <strong id="mystery-mask"></strong>
+              </div>
+            </section>
+            <button id="hint" class="hint">Give me a hint</button>
+            <p id="feedback" role="status" aria-live="polite"></p>
           </section>
         </aside>
       </div>
+    </main>
+    <dialog id="dialog">
+      <div class="dialog-top">
+        <span class="eyebrow" id="dialog-kicker"></span
+        ><button id="close" aria-label="Close">×</button>
+      </div>
+      <div id="dialog-content"></div>
+    </dialog>
+    <template id="guide-template"
+      ><h2>Field guide</h2>
+      <p>
+        Find each listed word in a straight line, then solve the final riddle
+        and find its answer on the same board.
+      </p>
+      <p>
+        Drag or tap the two ends in either order. On a keyboard, use the arrows
+        to move, Enter or Space to choose each end, and Escape to start over.
+      </p>
+      <p>
+        Switch to Clues to solve each entry from its description. Successive
+        hints give a starting letter, a direction, then a brief look at the
+        path. Finish without hints to earn a gold seal. For an atlas star,
+        select Clues before opening a fresh map and solve it entirely from clues
+        without hints.
+      </p>
+      <p>
+        Free play opens a fresh map each visit. Your daily edition is shared by
+        local calendar date and saves progress on this device.
+      </p></template
+    >
 
-      <p class="mobile-instruction"><span aria-hidden="true">✦</span> Drag through a word, or tap its first and last letters.</p>
-    </section>
-  </main>
-
-  <audio id="game-music" data-johnny-music src="/home/cozy-builder-theme.mp3" preload="metadata"></audio>
-  <script src="/audio-focus.js?v=1"></script>
-  <script src="/cozy-search/ambient-world.js?v=cozy-observatory-2026-09-04-ambient"></script>
-  <script src="/cozy-search/observatory.js?v=cozy-observatory-2026-09-04"></script>
-  <script src="/cozy-search/cozy-search.js?v=cozy-observatory-2026-09-04-clear-letters"></script>
-</body>
+    <div id="audio-controls" hidden>
+      <label for="soundtrack-select">Soundtrack</label
+      ><select id="soundtrack-select" aria-label="Soundtrack">
+        <option value="cozy">Johnny’s Cozy Theme</option>
+        <option value="dreamy-clouds">Dreamy Clouds</option>
+        <option value="neon-dreams">Neon Dreams</option>
+        <option value="whimsical-waltz">Whimsical Waltz</option>
+        <option value="crownforge-rp">Johnny’s RP</option>
+        <option value="nocturnal-calm">Nocturnal Calm</option>
+        <option value="loop-all">Loop all</option></select
+      ><button id="music-button" aria-pressed="false">
+        <span id="music-button-label">Music off</span>
+      </button>
+    </div>
+    <audio id="game-music" data-johnny-music preload="none"></audio>
+    <script src="/audio-focus.js?v=1"></script>
+    <script src="./atlas-audio.js?v=1"></script>
+    <script type="module" src="./atlas.mjs?v=1"></script>
+  </body>
 </html>
