@@ -275,7 +275,12 @@ function start(spec, prior) {
     (daily ? "Daily" : "Map") + " № " + spec.seed.toString(36).toUpperCase();
   $("board-size").textContent = puzzle.config.size + " × " + puzzle.config.size;
   $("timer").textContent = clock(state.ms);
+  board
+    .closest("main")
+    .classList.toggle("wide-board", puzzle.config.size >= 11);
   buildGrid();
+  sizeBoardWindow();
+  boardWindow.scrollTo(0, 0);
   render();
   runClock();
   feedback(complete() ? "This edition is in your field journal." : "");
@@ -289,6 +294,83 @@ function goFree() {
   if (state.spec.mode === "free") return;
   if (freeSession) start(freeSession.spec, freeSession);
   else newFree(read("level", "easy"));
+}
+const boardWindow = $("board-window");
+const sizeControl = $("letter-size");
+const sizes = ["comfort", "large", "fit"];
+const savedSize = read("letter-size", "comfort");
+sizeControl.value = sizes.includes(savedSize) ? savedSize : "comfort";
+boardWindow.dataset.size = sizeControl.value;
+const panControls = $("board-pan");
+const panButtons = [...panControls.querySelectorAll("button")];
+function updateBoardRange() {
+  if (panControls.hidden) return;
+  const pitch = board.getBoundingClientRect().width / puzzle.config.size;
+  const range = (offset, extent) =>
+    Math.floor((offset + 1) / pitch) +
+    1 +
+    "–" +
+    Math.min(puzzle.config.size, Math.ceil((offset + extent - 1) / pitch));
+  const {
+    scrollLeft: x,
+    scrollTop: y,
+    clientWidth: w,
+    clientHeight: h,
+  } = boardWindow;
+  $("board-range").textContent =
+    "Rows " + range(y, h) + " · Cols " + range(x, w);
+  const blocked = {
+    left: x < 1,
+    right: x + w >= boardWindow.scrollWidth - 1,
+    up: y < 1,
+    down: y + h >= boardWindow.scrollHeight - 1,
+  };
+  for (const button of panButtons)
+    button.disabled = blocked[button.dataset.pan];
+}
+function sizeBoardWindow() {
+  const width = boardWindow.offsetWidth;
+  const scrollable = board.getBoundingClientRect().width > width + 1;
+  boardWindow.style.setProperty("--window-width", width + "px");
+  boardWindow.classList.toggle("scrollable", scrollable);
+  panControls.hidden = !scrollable;
+  $("board-tip").textContent = scrollable
+    ? "Tap one end, swipe or use the arrows to move, then tap the other end."
+    : "Drag through a word or tap its two ends.";
+  updateBoardRange();
+}
+sizeControl.onchange = () => {
+  const size = sizeControl.value;
+  const keep = anchor ?? selectedHint ?? focused;
+  boardWindow.dataset.size = size;
+  write("letter-size", size);
+  sizeBoardWindow();
+  bringIntoBoardView(keep);
+};
+boardWindow.addEventListener("scroll", updateBoardRange, { passive: true });
+new ResizeObserver(sizeBoardWindow).observe(boardWindow);
+for (const button of panButtons)
+  button.onclick = () => {
+    const dx = boardWindow.clientWidth * 0.65,
+      dy = boardWindow.clientHeight * 0.65;
+    const moves = {
+      left: [-dx, 0],
+      right: [dx, 0],
+      up: [0, -dy],
+      down: [0, dy],
+    };
+    boardWindow.scrollBy(...moves[button.dataset.pan]);
+  };
+function bringIntoBoardView(index) {
+  if (panControls.hidden) return;
+  const box = cells[index].getBoundingClientRect();
+  const view = boardWindow.getBoundingClientRect();
+  const delta = (start, end, lo, hi) =>
+    Math.min(0, start - lo) + Math.max(0, end - hi);
+  boardWindow.scrollBy(
+    delta(box.left, box.right, view.left, view.left + boardWindow.clientWidth),
+    delta(box.top, box.bottom, view.top, view.top + boardWindow.clientHeight),
+  );
 }
 function buildGrid() {
   board.replaceChildren();
@@ -484,6 +566,7 @@ function giveHint() {
   state.hintSteps[entry.word] = step;
   selectedHint = path[0];
   cells[selectedHint].classList.add("marked");
+  bringIntoBoardView(selectedHint);
   const n = puzzle.config.size,
     a = path[0],
     b = path.at(-1);
@@ -532,7 +615,10 @@ function focusCell(index, move) {
   cells[focused].tabIndex = -1;
   focused = index;
   cells[index].tabIndex = 0;
-  if (move) cells[index].focus({ preventScroll: true });
+  if (move) {
+    cells[index].focus({ preventScroll: true });
+    bringIntoBoardView(index);
+  }
 }
 function hit(event) {
   const box = board.getBoundingClientRect(),
@@ -541,7 +627,10 @@ function hit(event) {
     y = Math.floor(((event.clientY - box.top) * n) / box.height);
   return x < 0 || x >= n || y < 0 || y >= n ? null : y * n + x;
 }
+let nativeTouch = false;
 board.addEventListener("pointerdown", (event) => {
+  nativeTouch = event.pointerType === "touch" && !panControls.hidden;
+  if (nativeTouch) return;
   const index = hit(event);
   clearTimeout(hintTimer);
   if (complete() || index === null || gesture || event.button !== 0) return;
@@ -583,8 +672,16 @@ board.addEventListener("lostpointercapture", () => {
   }
 });
 board.addEventListener("click", (event) => {
-  if (event.detail === 0 && event.target.matches(".cell") && !complete())
-    chooseCell(Number(event.target.dataset.index));
+  if (
+    (event.detail === 0 || nativeTouch) &&
+    event.target.matches(".cell") &&
+    !complete()
+  ) {
+    const index = Number(event.target.dataset.index);
+    focusCell(index, false);
+    chooseCell(index);
+  }
+  nativeTouch = false;
 });
 board.addEventListener("keydown", (event) => {
   if (!event.target.matches(".cell")) return;

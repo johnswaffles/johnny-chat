@@ -12,7 +12,7 @@
       name="description"
       content="Explore six illustrated places in a word search with crossword clues, a hidden final word, and a new shared puzzle every day."
     />
-    <link rel="stylesheet" href="./atlas.css?v=1" />
+    <link rel="stylesheet" href="./atlas.css?v=2" />
   </head>
   <body>
     <header class="masthead">
@@ -71,6 +71,14 @@
                 <option value="expert">Very hard</option>
               </select>
             </div>
+            <div class="board-meta">
+              <label for="letter-size">Letters</label>
+              <select id="letter-size">
+                <option value="comfort">Comfort</option>
+                <option value="large">Large</option>
+                <option value="fit">Fit board</option>
+              </select>
+            </div>
             <button id="new" class="text-action">
               <span aria-hidden="true">↻</span> New puzzle
             </button>
@@ -84,12 +92,29 @@
               <span id="direction"></span
               ><span id="timer" aria-label="Time playing">0:00</span>
             </div>
-            <div
-              id="board"
-              role="grid"
-              aria-label="Letter grid"
-              aria-describedby="board-tip"
-            ></div>
+            <div id="board-window">
+              <div
+                id="board"
+                role="grid"
+                aria-label="Letter grid"
+                aria-describedby="board-tip"
+              ></div>
+            </div>
+            <div id="board-pan" hidden>
+              <span id="board-range"></span>
+              <div role="group" aria-label="Move around board">
+                <button data-pan="left" aria-label="Move board view left">
+                  ←
+                </button>
+                <button data-pan="right" aria-label="Move board view right">
+                  →
+                </button>
+                <button data-pan="up" aria-label="Move board view up">↑</button>
+                <button data-pan="down" aria-label="Move board view down">
+                  ↓
+                </button>
+              </div>
+            </div>
             <div class="paper-foot">
               <span id="coordinates"></span><span aria-hidden="true">✴</span
               ><span id="board-size"></span>
@@ -173,6 +198,6 @@
     <audio id="game-music" data-johnny-music preload="none"></audio>
     <script src="/audio-focus.js?v=1"></script>
     <script src="./atlas-audio.js?v=1"></script>
-    <script type="module" src="./atlas.mjs?v=1"></script>
+    <script type="module" src="./atlas.mjs?v=2"></script>
   </body>
 </html>
