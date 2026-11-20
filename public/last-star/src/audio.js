@@ -33,6 +33,10 @@ export class Soundscape {
     if(!this.ctx||!this.enabled||!this.noiseBuffer||this.voices.size>=32)return;const t=this.ctx.currentTime,n=this.ctx.createBufferSource(),f=this.ctx.createBiquadFilter(),g=this.ctx.createGain();n.buffer=this.noiseBuffer;f.type='lowpass';f.frequency.setValueAtTime(frequency,t);f.frequency.exponentialRampToValueAtTime(100,t+duration);g.gain.setValueAtTime(volume,t);g.gain.exponentialRampToValueAtTime(.001,t+duration);n.connect(f);f.connect(g);g.connect(this.master);this.track(n,[f,g]);n.start();n.stop(t+duration);
   }
   event(e){
+    if (e.type === 'trail-note') {
+      this.tone([523,659,784][e.count], .35, .08, 'sine');
+      if (e.complete) this.tone(1046, .6, .06, 'triangle', null, .12);
+    }
     if(e.type==='windup'&&e.distance<650){this.tone(e.role==='ranged'?480:130,.24,.045,'triangle',e.role==='ranged'?780:85);}
     if(e.type==='encounter-start'){this.tone(110,.65,.08,'triangle',82);this.tone(165,.5,.05,'sine',null,.18);}
     if(e.type==='encounter-clear'){[523.25,659.25,783.99,1046.5].forEach((f,i)=>this.tone(f,.7,.085,'sine',null,i*.11));this.crack(.3,.045,2200);}

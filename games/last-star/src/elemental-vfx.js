@@ -1,3 +1,4 @@
+import {drawIceNeedle} from './flight-motion.js';
 // Bounded painted/procedural effects; no fullscreen filters or gameplay changes.
 const TAU=Math.PI*2;
 const colors={ember:['#ff7938','#ffd08a','gold'],frost:['#7cdcff','#efffff','blue'],chain:['#ae83ff','#faf0ff','violet']};
@@ -58,11 +59,17 @@ export function drawElementalProjectile(r,b){
  if(b.kind!=='ember'&&b.kind!=='frost')return false;
  const c=r.ctx,x=b.x-r.camera,y=b.y,t=r.time,a=Math.atan2(b.vy,b.vx),ember=b.kind==='ember',n=detail(r);r.glow(x,y,ember?82:44,ember?'gold':'blue',ember?.48:.40);c.save();c.translate(x,y);c.rotate(a);
  if(ember){
+  if(r.art?.emberFlight){
+   const frame=Math.floor(t*(r.gentle?19:42))%24;
+   c.drawImage(r.art.emberFlight,frame%6*168,Math.floor(frame/6)*80,168,80,-104,-32,134.4,64);
+   c.globalCompositeOperation='screen';
+  }else{
   const bend=r.gentle?0:Math.sin(t*6)*4;c.globalCompositeOperation='source-over';flameRibbon(c,84,12,bend,'#9c291f88');flameRibbon(c,68,9,-bend,'#ff6726b3');c.globalCompositeOperation='screen';flameRibbon(c,49,5,bend*.5,'#ffce719c');
   if(!painted(r,'magicEmber',0,0,46,46,r.gentle?0:t*.28)){c.globalCompositeOperation='source-over';moltenCore(c,16,r.gentle?0:t);}c.globalCompositeOperation='screen';
+  }
   for(let i=0;i<(n===0?1:n===1?3:5);i++){const s=(t*1.1+i*.23)%1;c.globalAlpha=(1-s)*.75;c.fillStyle=i%2?'#ff9a47':'#ffdf9f';c.beginPath();c.moveTo(-20-s*64,Math.sin(i*9)*s*15);c.lineTo(-24-s*64,Math.sin(i*9)*s*15-1.8);c.lineTo(-22-s*64,Math.sin(i*9)*s*15+1.8);c.closePath();c.fill();}
  }else{
-  c.globalCompositeOperation='source-over';c.fillStyle='#296b9266';c.beginPath();c.moveTo(14,0);c.lineTo(-68,-5);c.lineTo(-42,2);c.lineTo(-61,7);c.closePath();c.fill();c.globalCompositeOperation='screen';c.fillStyle='#9ae9f950';c.beginPath();c.moveTo(14,0);c.lineTo(-55,-2);c.lineTo(-31,4);c.closePath();c.fill();line(c,[[-49,-1],[-12,-2],[17,0]],'#d2ffff9c',1.2);c.globalCompositeOperation='source-over';crystal(c,0,0,17,0);if(n===2){c.globalAlpha=.65;crystal(c,-27,6,4,.25);crystal(c,-43,-4,3,-.3);}
+  c.globalCompositeOperation='source-over';drawIceNeedle(r,a);
  }c.restore();return true;
 }
 function emberImpact(r,f,q,age){

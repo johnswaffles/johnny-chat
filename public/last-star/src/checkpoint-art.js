@@ -1,3 +1,4 @@
+import {drawPickupMotion} from './pickup-motion.js';
 import {arcanaSprite,unit,facet} from './arcana-sprites.js?release=20261026-astral-gateways';
 const TAU=Math.PI*2;
 export function sealState(checkpoint,index){return index<checkpoint?'awakened':index===checkpoint?'ready':'dormant';}
@@ -52,7 +53,9 @@ export function drawObservatoryGate(r,g){
 }
 export function drawReturnEmber(r){
  const x=7730-r.camera,y=445+(r.gentle?0:Math.sin(r.time)*3);
+ if(x<-120||x>r.w+120)return;
  r.glow(x,y,210,'gold',.6);if(!sealSprite(r,'awakened',x,y,92,108))r.star(x,y,26,'#f2d79b');
+ drawPickupMotion(r,'ember',x,y-6,49);
 }
 export function drawPlayerWard(r,p,kind='mantle',remaining=p.mantle){
  if(!(remaining>0))return;

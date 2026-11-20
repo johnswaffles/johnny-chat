@@ -1,3 +1,4 @@
+import {drawVoidWake} from './flight-motion.js';
 import {arcanaSprite,unit,facet} from './arcana-sprites.js?release=20261026-astral-gateways';
 const TAU=Math.PI*2;
 export const ARCANA_FX_LIMIT=24;
@@ -32,12 +33,18 @@ export function drawHostileProjectile(r,b){
  // Dark back edge, then colored plasma, then the distinct painted nucleus.
  const tail=c.createLinearGradient(-82,0,8,0);tail.addColorStop(0,'#3d205000');tail.addColorStop(.6,'#5b267b99');tail.addColorStop(1,'#ef9affcc');
  c.fillStyle=tail;c.beginPath();c.moveTo(4,-8);c.bezierCurveTo(-14,-16,-48,10,-82,-3);c.bezierCurveTo(-43,23,-19,8,4,8);c.closePath();c.fill();
- c.strokeStyle='#d4a0fa';c.lineWidth=1.2;c.beginPath();c.moveTo(-60,4);c.bezierCurveTo(-37,8,-20,-9,4,-3);c.stroke();
+ drawVoidWake(r,sweep);
  if(sweep){
+  c.save();const flex=Math.sin(r.time*(quiet?3:9));c.rotate(flex*.14);c.scale(1+.08*flex,1-.09*flex);
   c.fillStyle='#301a51cc';c.beginPath();c.moveTo(-38,22);c.bezierCurveTo(4,18,32,-2,9,-25);c.bezierCurveTo(42,-2,32,22,-38,22);c.closePath();c.fill();
-  c.strokeStyle='#edb5ff';c.lineWidth=2.1;c.beginPath();c.moveTo(-32,21);c.bezierCurveTo(15,15,25,-4,9,-25);c.stroke();
+  c.strokeStyle='#edb5ff';c.lineWidth=2.1;c.beginPath();c.moveTo(-32,21);c.bezierCurveTo(15,15,25,-4,9,-25);c.stroke();c.restore();
  }
- darkCore(r,0,0,size,quiet?0:r.time*.55);
+ darkCore(r,0,0,size,r.time*(quiet?.6:2.1));
+ // Splinters exchange depth as they orbit the nucleus. Their shadows disappear behind it.
+ for(let j=0;j<(r.quality==='low'?2:3);j++){
+  const a=r.time*(quiet?3:7)+j*TAU/3;
+  if(Math.cos(a)>-.30)facet(c,Math.cos(a)*size*.28,Math.sin(a)*size*.45,2.8+Math.cos(a),a,'#e2b1f3');
+ }
  if(!r.gentle){const n=r.quality==='low'?2:4;for(let i=0;i<n;i++){const phase=(r.time*.85+i/n)%1;facet(c,-16-phase*55,Math.sin(i*7)*phase*14,2.5*(1-phase),angle+i,'#caa3ee');}}
  c.restore();
 }

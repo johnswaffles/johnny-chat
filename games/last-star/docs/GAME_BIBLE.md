@@ -240,3 +240,23 @@ Keep mobile text inflation at 100%, bound the title grid to the viewport, and pr
 ## Thumb controls flush to the edges — October 29 follow-up
 
 The user requested movement all the way left and down, and actions all the way right without lowering the action group. Movement and contextual interaction now use a 0px left inset; movement uses a separate 0px bottom inset. Actions use a 0px right inset and retain their existing bottom inset of max(4px, device safe-area bottom). This supersedes the previous side and movement-bottom safe-area margins for these controls. HUD and menu safe areas, target sizes and spacing stay unchanged. Release marker: `20261029-thumb-edges`.
+
+## Silverwood prototype, November 17
+
+Three optional three-note trails lead from the main path onto existing high ledges in the Silverwood, Aqueduct and Observatory approaches. Touch the bright star and follow its dotted arc. The final note awards 500 points and eight seconds of Overdrive once per trail per run. The results screen counts finished trails. Like score, trails reset on checkpoint reload. Each restored seal independently adds one figure to the sky and strengthens the northern lights. A painted silver stag rises from the first seal for four seconds on activation. The Stag, Heron and Crown identify the three regions.
+
+A successful Eventide blink toward a hostile bolt about to cross the wizard can catch one bolt and earn 150 points. Judge the incoming path within a quarter second. The first seal teaches the move. Both additions use existing movement, sound, scoring and controls.
+
+## Hovering ledges and spell flight, November 17
+
+Silverwood's sixteen raised islands rise and fall independently. A landing compresses the island and its spring settles under the wizard’s weight. Use the same surface height for collision, standing feet, blink targeting, painted rock and planted flora. Trailing vines bend from anchored roots. Dew detaches from a vine tip. Keep the solid ground, chest and lantern placements level.
+
+Ember Orb uses a 24-frame looping fire sheet with a rolling core and changing flame tongues. The original impact painting still appears on detonation. Frost Fan's five blades roll around their individual flight directions, Starshard sheds curved blue wavefronts, and hostile spells wind around dark nuclei. Flight art follows velocity, including left-facing and angled shots. Bake fire away from the game loop and advance spell animation from the pausable renderer clock. The elemental review includes slow motion for inspecting the flight.
+
+## Living treasures of Silverwood, November 17
+
+Every ground collectible has a material-specific idle animation. Ember is an upright ball of fire with circulating molten crust and rising sparks. Frost opens its crystal fan and sheds ice, Chain carries a forked discharge between three fixed stars, and the Healing Flask has moving liquid, bubbles and a reflection on its glass belly. The Star Crystal and gem turn their facets through the light. Gold rotates far enough to reveal its reeded edge. Enemy crystal drops share the Star Crystal animation and carry their own phase into attraction. The Observatory's final relic cradles a small living ember.
+
+Closed chests catch light along their brass fittings. On breaking, a chest plays one opening from its grounded foot as its reward appears. The empty state uses the original open painting. Apply these renderers to placed, chest-released, encounter and enemy loot wherever the item appears. HUD portraits remain readable at icon size. Gentle and reduced-flash modes use steady material poses. Pausing freezes the scene clock.
+
+World animation comes from the original celestial paintings and procedural material work in tools/bake-living-pickups.cjs. The versioned living-pickups-v1.webp sheet contains 24 frames per row for seven collectibles, the closed chest and its opening. Runtime cost is one sprite draw for each visible item's material. Review at gameplay scale in tests/treasure-review.html.

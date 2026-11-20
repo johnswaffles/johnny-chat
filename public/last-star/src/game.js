@@ -1,5 +1,7 @@
+import {makeHoverLedge, advanceHoverLedges} from './hover-ledge.js';
+import {followTrails, catchIncomingStar} from './silverwood-trails.js';
 import {newSilverwoodEncounter,updateSilverwoodEncounter,silverwoodEnemyReady} from './silverwood-encounter.js?release=20261001-stick-wheel';
-import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20261001-stick-wheel';
+import {INTRO_LOOT,CHESTS,breakChest,placeLoot,updateLoot} from './loot.js?release=20261117-living-treasures';
 import {newInventory,useEquipped,grantItem} from './inventory.js?release=20261001-stick-wheel';
 import {LEVEL1,segmentBlocked,SOLIDS} from './level1-config.js?release=20261001-stick-wheel';
 import {newArcade,arcadeDamage,rewardKill,updateArcade} from './arcade.js?release=20261001-stick-wheel';
@@ -42,7 +44,8 @@ export function parseSave(raw) {
 }
 export class Game {
   constructor(saved=null){
-    this.silverwood=newSilverwoodEncounter(saved?.checkpoint||0);this.inventory=newInventory();this.solids=SOLIDS;this.arcade=newArcade();this.platforms=PLATFORMS;this.time=0;this.elapsed=saved?.elapsed||0;this.checkpoint=saved?.checkpoint||0;this.memories=new Set(saved?.memories||[]);
+    this.trailCounts = [0, 0, 0];
+    this.silverwood=newSilverwoodEncounter(saved?.checkpoint||0);this.inventory=newInventory();this.solids=SOLIDS;this.arcade=newArcade();this.platforms=PLATFORMS.map(p=>p.upper?makeHoverLedge(p):p);this.time=0;this.elapsed=saved?.elapsed||0;this.checkpoint=saved?.checkpoint||0;this.memories=new Set(saved?.memories||[]);
     this.chests=CHESTS.map(d=>({...placeLoot(this,d),open:false,hp:1}));this.loot=INTRO_LOOT.map(d=>placeLoot(this,d));this.state='playing';this.events=[];this.projectiles=[];this.effects=[];this.numbers=[];this.kills=0;this.bossStarted=false;this.bossDefeated=false;this.zone=-1;this.jumpBuffer=0;this.coyote=0;this.targetId=null;this.chain=0;this.dragon=null;this.lastNotice=-10;
     const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};
     this.player={x:spawn.x,y:spawn.y,vx:0,vy:0,face:1,hp:210,maxHp:210,mana:100,onGround:true,jumps:0,invuln:0,mantle:0,mantleCd:0,cast:0,retaliation:0,hurtPose:0,blinked:false,rangeStacks:0,cooldowns:{bolt:0,blink:0,constellation:0,dragon:0}};
@@ -66,8 +69,9 @@ export class Game {
       if(this.enemies.some(e=>!e.dead&&Math.abs(e.x-this.player.x)<280)){this.notice('The seal cannot wake while a shade is near.');return;}
       const fresh=near.index===this.checkpoint;
       this.checkpoint=Math.max(this.checkpoint,near.index+1);this.player.hp=210;this.player.mana=100;
+      if(fresh && near.index === 0) this.firstSealTime = this.time;
       if(fresh){this.player.cooldowns.dragon=0;this.event('seal',{index:near.index,x:SEALS[near.index].x,y:SEALS[near.index].y});
-        const lines=['The first light answers. Two more seals will open the Observatory.','The aqueduct remembers the stars. Vaelthryx can hear us now.','All three seals are awake. Something waits beneath the great astrolabe.'];
+        const lines=['The Stag shines again. Blink into an incoming bolt to catch its star.','The aqueduct remembers the stars. Vaelthryx can hear us now.','All three seals are awake. Something waits beneath the great astrolabe.'];
         this.event('dialogue',{text:lines[near.index]});
       }else this.notice('Health and starlight restored.');
       this.event('save');
@@ -115,11 +119,12 @@ export class Game {
         const x=clamp(p.x+direction*d,25,WIDTH-60);
         if(this.bossStarted&&!this.bossDefeated&&(x<6840||x>7660))continue;
         if(!this.bossStarted&&this.checkpoint<3&&x>6880)continue;
-        const ground=PLATFORMS.filter(f=>x>f.x+18&&x<f.x+f.w-18&&f.y>=p.y-35&&f.y<p.y+245).sort((a,b)=>a.y-b.y)[0];
+        const ground=this.platforms.filter(f=>x>f.x+18&&x<f.x+f.w-18&&f.y>=p.y-35&&f.y<p.y+245).sort((a,b)=>a.y-b.y)[0];
         if(ground&&!segmentBlocked(from,{x,y:Math.min(p.y,ground.y-2)},this.solids)){landing={x,y:Math.min(p.y,ground.y-2)};break;}
       }
       if(!landing){this.notice('No safe ground within the passage.');return false;}
       p.x=landing.x;p.y=landing.y;p.vy=Math.min(p.vy,0);p.invuln=.85;p.blinked=true;p.rangeStacks=Math.min(5,p.rangeStacks+1);p.face=direction;
+      catchIncomingStar(this, from, landing);
       this.event('blink',{from,to:landing});
       let attack=null;
       for(const pos of [from,landing]){
@@ -132,7 +137,7 @@ export class Game {
       p.castKind='constellation';
       const targets=this.enemies.filter(e=>!e.dead&&Math.abs(e.x-p.x)<660&&(e.x-p.x)*p.face>-60).sort((a,b)=>Math.abs(a.x-p.x)-Math.abs(b.x-p.x));
       const x=clamp(Number.isFinite(input.aimX)?input.aimX:targets[0]?.x??p.x+p.face*230,p.x-650,p.x+650);
-      const platform=PLATFORMS.filter(f=>x>=f.x&&x<=f.x+f.w).sort((a,b)=>b.y-a.y)[0];
+      const platform=this.platforms.filter(f=>x>=f.x&&x<=f.x+f.w).sort((a,b)=>b.y-a.y)[0];
       const y=platform?.y||580;
       this.effects.push({type:'constellation',attack:this.beginAttack(),x,y,life:1.7,age:0,fired:false});p.cast=.6;
       this.event('constellation',{x,y});
@@ -173,6 +178,7 @@ export class Game {
   update(dt,input={}){
     if(this.state!=='playing')return;
     dt=clamp(dt,0,.04);this.time+=dt;this.elapsed+=dt;const p=this.player;
+    advanceHoverLedges(this,dt);
     for(const key in p.cooldowns)p.cooldowns[key]=Math.max(0,p.cooldowns[key]-dt);
     for(const key of ['invuln','mantle','mantleCd','cast','hurtPose'])p[key]=Math.max(0,p[key]-dt);
     this.inventory.cooldown=Math.max(0,this.inventory.cooldown-dt);p.mana=Math.min(100,p.mana+dt*8);updateArcade(this,dt);updateLoot(this,dt);
@@ -185,7 +191,7 @@ export class Game {
     const move=clamp(input.move||0,-1,1);p.vx+=(move*265-p.vx)*Math.min(1,dt*15);
     if(move)p.face=Math.sign(move);
     const previousY=p.y;p.x=clamp(p.x+p.vx*dt,24,WIDTH-55);p.vy=Math.min(p.vy+1400*dt,850);p.y+=p.vy*dt;p.onGround=false;
-    if(p.vy>=0)for(const f of PLATFORMS){if(p.x+14>f.x&&p.x-14<f.x+f.w&&previousY<=f.y+5&&p.y>=f.y){p.y=f.y;p.vy=0;p.onGround=true;p.jumps=0;break;}}
+    if(p.vy>=0)for(const f of this.platforms){if(p.x+14>f.x&&p.x-14<f.x+f.w&&previousY<=f.y+5&&p.y>=f.y){if(f.upper && p.vy>100)f.springSpeed=Math.min(85,p.vy*.14);p.y=f.y;p.vy=0;p.onGround=true;p.jumps=0;break;}}
     if(this.checkpoint<3&&p.x>6870){p.x=6870;this.notice('Three starseals hold the Observatory gate.');}
     if(this.bossStarted&&!this.bossDefeated)p.x=clamp(p.x,6840,7660);
     if(p.y>880){p.invuln=0;this.hurt(35,'environment');if(this.state==='playing'){const spawn=this.checkpoint?SEALS[this.checkpoint-1]:{x:230,y:580};p.x=spawn.x;p.y=spawn.y;p.vx=p.vy=0;p.jumps=0;this.bossStarted=false;const boss=this.enemies.find(e=>e.type==='boss');if(!boss.dead){boss.hp=boss.maxHp;boss.x=boss.origin;boss.windup=0;boss.cd=2;}this.projectiles=[];this.notice('The ember catches you. Return to the path.');}}
@@ -198,6 +204,7 @@ export class Game {
     const zone=p.x<2600?0:p.x<5100?1:2;
     if(zone!==this.zone){this.zone=zone;this.event('zone',{index:zone});}
     if(p.x>6910&&this.checkpoint===3&&!this.bossStarted&&!this.bossDefeated){this.bossStarted=true;const boss=this.enemies.find(e=>e.type==='boss');this.event('boss',{x:boss.x,y:boss.y});}
+    if (this.state === 'playing') followTrails(this);
     updateSilverwoodEncounter(this,dt);
     for(const e of this.enemies){
       if(e.dead)continue;if(e.burn>0){e.burn=Math.max(0,e.burn-dt);e.burnTick-=dt;if(e.burnTick<=0){e.burnTick+=LEVEL1.spells.ember.burnInterval;const before=e.hp;this.damage(e,LEVEL1.spells.ember.burnDamage,null,'fire');if(e.hp<before){const n=this.numbers.at(-1);if(n){n.color='#ffad69';n.text+=' burn';}this.event('burn-tick',{x:e.x,y:e.y-45,enemyId:e.id,damage:before-e.hp});}}}if(e.dead)continue;for(const k of ['freeze','freezeImmune','slow'])e[k]=Math.max(0,(e[k]||0)-dt);e.stagger=Math.max(0,e.stagger-dt);e.staggerCd=Math.max(0,e.staggerCd-dt);e.flash=Math.max(0,e.flash-dt);e.attack=Math.max(0,e.attack-dt);

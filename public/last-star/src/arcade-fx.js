@@ -1,5 +1,5 @@
-import {drawPlayerWard} from './checkpoint-art.js?release=20261026-astral-gateways';
-import {drawArcadeCrystal} from './pickup-art.js?release=20261026-celestial-treasures';
+import {drawPlayerWard} from './checkpoint-art.js?release=20261117-living-treasures';
+import {drawArcadeCrystal} from './pickup-art.js?release=20261117-living-treasures';
 const TAU=Math.PI*2;
 export function arcadeEvent(r,e){
  if(['overdrive','power-rank'].includes(e.type)){

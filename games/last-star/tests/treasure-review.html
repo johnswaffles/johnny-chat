@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Silverwood · Living treasures</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;color:#e9e3d2;background:#0a1520}*{box-sizing:border-box}
+body{max-width:1440px;margin:0 auto;padding:clamp(14px,3vw,36px)}
+header,footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font:normal clamp(27px,4vw,44px) Georgia,serif;margin:0}a{color:#f1d49a}
+.viewport{position:relative;overflow:auto;margin:18px 0;height:auto;border:1px solid #445662}
+.crop{position:relative;width:100%;min-width:740px;aspect-ratio:1100/360;overflow:hidden}
+.scene{position:absolute;left:0;width:100%;top:-78%;aspect-ratio:1100/720}
+canvas{width:100%;height:100%;display:block}button{color:#e8dfc9;background:#142736;border:1px solid #60717b;border-radius:4px;padding:8px 14px;font:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid #b3edff}footer{justify-content:flex-start}output{color:#a9c2cc}
+</style></head><body>
+<header><h1>Living treasures of Silverwood</h1><a href="../?release=20261117-living-treasures">Play Silverwood ↗</a></header>
+<div class="viewport"><div class="crop"><div class="scene"><canvas aria-label="Animated treasure on the first stretch of Silverwood"></canvas></div></div></div>
+<footer><button id="chest" disabled>Open chest</button><button id="pause" disabled>Pause motion</button><output role="status">Loading artwork…</output></footer>
+<script type="module">
+import {Renderer,loadArt} from '../src/render.js?release=20261117-living-treasures';
+import {Game} from '../src/game.js?release=20261117-living-treasures';
+import {breakChest} from '../src/loot.js?release=20261117-living-treasures';
+const slots=[['ember','Ember Orb'],['flask','Healing Flask'],['frost','Frost Fan'],['chain','Chain Spark'],['power','Star Crystal'],['gem','Gem'],['gold','Gold']];
+const out=document.querySelector('output'),pause=document.querySelector('#pause'),chest=document.querySelector('#chest');
+try{
+ const game=new Game(),r=new Renderer(document.querySelector('canvas'),await loadArt());
+ const positions=[157,254,407,500,593,681,757];
+ const labels=slots.map(([,name],i)=>({x:positions[i],name}));
+ game.loot=slots.map(([kind],i)=>({kind,x:labels[i].x,y:558,floor:558,vy:0,age:0}));
+ const box={kind:'gem',x:983,y:552,floor:558,open:false};game.chests=[box];
+ game.arcade.drops=[{x:825,y:562,floor:562,vy:0,age:0}];
+ labels.push({x:825,name:'Shade drop'},{x:983,name:'Treasure chest'});
+ game.player.x=42;game.player.face=1;game.enemies.forEach(e=>e.dead=true);
+ r.title=false;let paused=false,last=0;
+ function nameplates(){
+  const c=r.ctx;c.save();c.setTransform(r.scale,0,0,r.scale,0,0);c.font='16px Georgia';c.textAlign='center';
+  for(const {x,name} of labels){c.strokeStyle='#07121c';c.lineWidth=3;c.strokeText(name,x,615);c.fillStyle='#f2ead4';c.fillText(name,x,615);}
+  c.restore();
+ }
+ pause.disabled=chest.disabled=false;
+ function status(){out.textContent=paused?'Motion paused':box.open?'Chest opened':'At gameplay scale';pause.textContent=paused?'Resume motion':'Pause motion';}
+ chest.onclick=()=>{if(box.open){box.open=false;game.loot.length=slots.length;}else{breakChest(game,box);paused=false;}
+  chest.textContent=box.open?'Reset chest':'Open chest';status();};
+ pause.onclick=()=>{paused=!paused;status();};status();
+ function frame(now){
+  const dt=paused?0:Math.min(.04,(now-(last||now))/1000);last=now;
+  game.update(dt,{});game.events=[];r.draw(game,dt);nameplates();requestAnimationFrame(frame);
+ }
+ addEventListener('resize',()=>r.resize());requestAnimationFrame(frame);
+}catch(error){out.textContent='Could not start the treasure preview.';console.error(error);}
+</script></body></html>

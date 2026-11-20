@@ -1,3 +1,4 @@
+import {drawPickupMotion,pickupPhase,CHEST_OPEN_TIME} from './pickup-motion.js';
 // Shared world presentation only. Pickup placement, attraction and rewards stay in loot/arcade.
 const TAU=Math.PI*2;
 const STYLES={
@@ -45,7 +46,7 @@ function glint(r,x,y,style,phase,size=1){
 
 export function drawGroundPickup(r,d){
  const x=d.x-r.camera;if(x<-96||x>r.w+96||d.taken)return;
- const style=STYLES[d.kind]||STYLES.power,phase=d.x*.017;
+ const style=STYLES[d.kind]||STYLES.power,phase=pickupPhase(r,d)*TAU;
  const settled=Number.isFinite(d.floor)&&Math.abs(d.y-d.floor)<.5&&Math.abs(d.vy||0)<.01;
  const bob=r.gentle?0:Math.sin(r.time*1.6+phase)*1.7;
  // Loot's resting center is 22 units above its supporting surface.
@@ -53,15 +54,19 @@ export function drawGroundPickup(r,d){
  if(settled)contact(c,x,d.floor+22,style.w*.27,style.rim);
  const pulse=r.gentle||r.reducedFlash?1:.96+.04*Math.sin(r.time*1.1+phase);
  r.glow(x,y,style.w*1.15,style.light,.30*pulse);
- const art=artwork(r,d.kind);
  c.save();
- if(art)sprite(c,art,x,y,style.w,style.h);
- else r.star(x,y,11,style.rim);
+ const size=d.kind==='ember'?72:d.kind==='power'?style.h:Math.max(style.w,style.h);
+ const animated=drawPickupMotion(r,d.kind,x,y,size,phase/TAU);
+ if(!animated){
+  const art=artwork(r,d.kind);
+  if(art)sprite(c,art,x,y,style.w,style.h);
+  else r.star(x,y,11,style.rim);
+ }
  c.restore();
- if(settled)glint(r,x,y,style,phase);
+ if(settled&&!animated)glint(r,x,y,style,phase);
 }
 
-export function drawGroundChest(r,d){
+export function drawGroundChest(r,d,sceneTime=0){
  const x=d.x-r.camera;if(x<-110||x>r.w+110)return;
  const c=r.ctx,style=STYLES.chest,ground=d.floor+22;
  const openedArt=d.open&&artwork(r,'chest_open'),art=openedArt||artwork(r,'chest');
@@ -69,15 +74,18 @@ export function drawGroundChest(r,d){
  if(!d.open)r.glow(x,ground-23,78,'gold',.20);
  c.save();c.globalAlpha=d.open&&!openedArt?.62:1;
  // The lid needs extra vertical room; both painted states retain their base/foot anchor.
- if(art)sprite(c,art,x,ground+1,style.w,openedArt?100:style.h,true);
- else {c.fillStyle=d.open?'#302c2b':'#856342';c.fillRect(x-30,ground-34,60,35);}
+ const age=Number.isFinite(d.openedAt)?Math.max(0,sceneTime-d.openedAt):CHEST_OPEN_TIME;
+ const movingLid=d.open&&age<CHEST_OPEN_TIME;
+ const animated=(!d.open||movingLid)&&drawPickupMotion(r,movingLid?'chest_open':'chest',x,ground+1,style.w,pickupPhase(r,d),age);
+ if(!animated&&art)sprite(c,art,x,ground+1,style.w,openedArt?100:style.h,true);
+ else if(!animated){c.fillStyle=d.open?'#302c2b':'#856342';c.fillRect(x-30,ground-34,60,35);}
  c.restore();
- if(!d.open)glint(r,x,ground-30,{...style,w:54,h:38},d.x*.017,.85);
+ if(!d.open&&!animated)glint(r,x,ground-30,{...style,w:54,h:38},d.x*.017,.85);
 }
 
 export function drawArcadeCrystal(r,d,player){
  const x=d.x-r.camera;if(x<-70||x>r.w+70||d.taken)return;
- const style=STYLES.power,phase=d.x*.017,c=r.ctx;
+ const style=STYLES.power,phase=pickupPhase(r,d)*TAU,c=r.ctx;
  const bob=d.homing||r.gentle?0:Math.sin(r.time*1.6+phase)*1.3,y=d.y+bob;
  const settled=!d.homing&&Number.isFinite(d.floor)&&Math.abs(d.y-d.floor)<.5&&Math.abs(d.vy||0)<.01;
  if(settled)contact(c,x,d.floor+18,10,style.rim);
@@ -89,8 +97,9 @@ export function drawArcadeCrystal(r,d,player){
   c.strokeStyle='#bfeeff80';c.lineWidth=1.3;c.beginPath();c.moveTo(x,y);c.lineTo(x+dx/length*tail,y+dy/length*tail);c.stroke();
  }
  const art=artwork(r,'power');
- if(art)sprite(c,art,x,y,29,35);
- else {
+ const animated=drawPickupMotion(r,'power',x,y,35,phase/TAU);
+ if(!animated&&art)sprite(c,art,x,y,29,35);
+ else if(!animated){
   c.fillStyle='#ffe79c';c.beginPath();c.moveTo(x,y-12);c.lineTo(x+8,y-2);c.lineTo(x,y+13);c.lineTo(x-8,y-2);c.closePath();c.fill();
   c.fillStyle='#aa771b';c.beginPath();c.moveTo(x,y-12);c.lineTo(x+8,y-2);c.lineTo(x,y+13);c.closePath();c.fill();
  }

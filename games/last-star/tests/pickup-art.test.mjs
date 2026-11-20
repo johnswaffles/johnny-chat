@@ -76,3 +76,31 @@ test('crystal presentation preserves drops, supports homing, and omits taken/off
   const q=renderer();drawArcadeCrystal(q,item,{x:0,y:0});drawGroundPickup(q,{...item,kind:'gold'});assert.deepEqual(q.calls,[]);
  }
 });
+
+const motionSheet={width:3072,height:1152};
+function sampleFrame(draw,r){draw(r);return r.calls.find(c=>c[0]==='drawImage');}
+
+test('all world rewards use distinct animated clips, including dropped crystals, with a steady frame in Gentle',()=>{
+ const kinds=['ember','frost','chain','flask','power','gem','gold','chest'];
+ for(const [row,kind] of kinds.entries()){
+  const d=Object.freeze({kind,x:200,y:558,floor:558,vy:0});
+  const draw=r=>kind==='chest'?drawGroundChest(r,d):drawGroundPickup(r,d);
+  const at=(time,opts={})=>sampleFrame(draw,renderer({art:{pickupMotion:motionSheet},time,...opts})).slice(2,6);
+  assert.equal(at(1)[1],row*128);
+  assert.notDeepEqual(at(1),at(1.23));assert.deepEqual(at(2),at(2));
+  for(const option of [{gentle:true},{reducedFlash:true}])assert.deepEqual(at(1,option),at(4,option));
+ }
+ const drop={x:230,y:509,homing:true};
+ const r=renderer({art:{pickupMotion:motionSheet}});
+ const first=sampleFrame(v=>drawArcadeCrystal(v,drop,{x:200,y:550}),r);
+ r.calls.length=0;drop.x+=80;const next=sampleFrame(v=>drawArcadeCrystal(v,drop,{x:200,y:550}),r);
+ assert.equal(first[2],next[2]);assert.equal(first[3],4*128);
+});
+
+test('a chest opening plays once from its actual break time, then uses the empty painting',()=>{
+ const art={pickupMotion:motionSheet,pickup_chest_open:image};
+ const chest={x:200,y:552,floor:558,open:true,openedAt:2};
+ const draw=t=>sampleFrame(r=>drawGroundChest(r,chest,t),renderer({art,time:t}));
+ assert.deepEqual(draw(2).slice(1,6),[motionSheet,0,1024,128,128]);
+ assert.ok(draw(2.25)[2]>0);assert.equal(draw(3)[1],image);
+});

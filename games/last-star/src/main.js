@@ -3,9 +3,9 @@ import {SelectionRing,SLOTS,grantItem} from './inventory.js?release=20261001-sti
 import {LEVEL1} from './level1-config.js?release=20261001-stick-wheel';
 const selection=new SelectionRing();
 let pendingActions={},hitStop=0,hitStopGap=0,needsFrame=true;
-import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20261026-astral-gateways';
-import {Renderer,loadArt} from './render.js?release=20261026-astral-gateways';
-import {Soundscape} from './audio.js?release=20261001-stick-wheel';
+import {Game,SAVE_KEY,parseSave,SEALS,COOLDOWNS,missingHealthBonus} from './game.js?release=20261117-living-treasures';
+import {Renderer,loadArt} from './render.js?release=20261117-living-treasures';
+import {Soundscape} from './audio.js?release=20261117-star-trails';
 import {Controller,readBindings,DEFAULT_KEYS,ACTIONS,keyName,buttonName,normalizeKey} from './controls.js?release=20261001-stick-wheel';
 import {ControlsUI} from './controls-ui.js?release=20261001-stick-wheel';
 const $=id=>document.getElementById(id);
@@ -37,7 +37,7 @@ function start(resume=false){
   hitStop=hitStopGap=0;audio.reset();qaReplay=false;toastUntil=dialogueUntil=areaUntil=0;$('dialogue').hidden=true;$('toast').classList.remove('visible');$('area-title').classList.remove('visible');
   game=new Game(resume?saved:null);renderer.camera=Math.max(0,game.player.x-renderer.w*.37);renderer.reset();
   setMode('playing');audio.start();accumulator=0;
-  if(!resume){showDialogue('One ember survived the sealed night. Follow the starseals. Bring its light home.');}
+  if(!resume){showDialogue('Restore the three seals. Follow three linked stars for Overdrive.');}
   updateUI();
 }
 function pause(){if(mode==='playing'||mode==='title'){menuReturn=mode;setMode('pause');if(menuReturn==='title')$('hud').hidden=true;}else if(mode==='pause')setMode(menuReturn);else if(mode==='bindings'){controlsUI.cancel();setMode('pause');}}
@@ -140,12 +140,12 @@ function events(){
     if(e.type==='treasure')showToast(e.text);
     if(e.type==='toast')showToast(e.text);
     if(e.type==='dialogue')showDialogue(e.text);
-    if(e.type==='zone'){$('area-title').querySelector('strong').textContent=zoneNames[e.index];areaUntil=performance.now()+4200;$('area-title').classList.add('visible');}
+    if(e.type==='zone'){$('area-title').querySelector('strong').textContent=zoneNames[e.index];areaUntil=performance.now()+2200;$('area-title').classList.add('visible');}
     if(e.type==='save')save();
     if(e.type==='mantle')showToast('Astral Mantle · the last star shields you');
     if(e.type==='boss'){showDialogue('The Hollow Astronomer. Still guarding a sky that no longer exists.');showToast('Watch the fan, marked ground, then the low sweep. Strike between casts.');}
     if(e.type==='dead'){save();setMode('dead');}
-    if(e.type==='won'){$('ending-stats').textContent=`3 / 3 starseals restored · ${game.arcade.score.toLocaleString()} points · best chain ×${game.arcade.bestCombo} · ${Math.floor(game.elapsed/60)}m ${Math.floor(game.elapsed%60)}s`;setMode('won');}
+    if(e.type==='won'){$('ending-stats').textContent=`3 / 3 starseals restored · ${game.trailCounts.filter(n => n === 3).length}/3 star trails · ${game.arcade.score.toLocaleString()} points · best chain ×${game.arcade.bestCombo} · ${Math.floor(game.elapsed/60)}m ${Math.floor(game.elapsed%60)}s`;setMode('won');}
   }game.events=[];
 }
 function updateUI(){

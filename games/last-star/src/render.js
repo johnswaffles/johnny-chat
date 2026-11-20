@@ -1,25 +1,27 @@
+import {drawLedgeGrowth,hoverOffset} from './hover-ledge.js';
+import {drawSealSky, drawStarTrails, drawWoodlandSign} from './silverwood-trails.js';
 import {ARCANA_ART} from './arcana-art.js?release=20261026-astral-gateways';
-import {arcanaEvent,drawHostileProjectile,drawEnemyAura,drawEnemyCharge,drawEnemySlash,drawHostileGround,drawArcanaAftermath} from './hostile-vfx.js?release=20261026-astral-gateways';
-import {prepareSealArt,drawCheckpoint,drawObservatoryGate,drawReturnEmber,drawPlayerWard,drawLantern} from './checkpoint-art.js?release=20261026-astral-gateways';
+import {arcanaEvent,drawHostileProjectile,drawEnemyAura,drawEnemyCharge,drawEnemySlash,drawHostileGround,drawArcanaAftermath} from './hostile-vfx.js?release=20261117-living-magic';
+import {prepareSealArt,drawCheckpoint,drawObservatoryGate,drawReturnEmber,drawPlayerWard,drawLantern} from './checkpoint-art.js?release=20261117-living-treasures';
 import {MAGIC_ART} from './magic-art.js?release=20261026-luminous-world';
-import {astralEvent,drawAstralEffects,drawStarshard} from './astral-vfx.js?release=20261026-luminous-world';
-import {drawElementalProjectile} from './elemental-vfx.js?release=20261026-luminous-world';
-import {prepareFlora,drawGorgeFlora} from './gorge-flora.js?release=20261001-stick-wheel';
+import {astralEvent,drawAstralEffects,drawStarshard} from './astral-vfx.js?release=20261117-living-magic';
+import {drawElementalProjectile} from './elemental-vfx.js?release=20261117-living-magic';
+import {prepareFlora,drawGorgeFlora} from './gorge-flora.js?release=20261117-living-magic';
 import {GorgeScene,drawGorgeFallback} from './gorge-scene.js?release=20261026-luminous-world';
 import {paintedAction,drawPaintedPose} from './action-poses.js?release=20261001-stick-wheel';
 import {drawReactiveLight,lightEvent,prepareWizardLighting,wizardLight,spellLights} from './reactive-light.js?release=20261026-astral-gateways';
 import {drawSilverwoodLayers,prepareSilverwoodLayers} from './silverwood-layers.js?release=20261001-stick-wheel';
 import {sceneMotion,renderResolution,drawSceneLife} from './scene-life.js?release=20261001-stick-wheel';
-import {drawLevel1,elementEvent} from './level1-fx.js?release=20261026-astral-gateways';
+import {drawLevel1,elementEvent} from './level1-fx.js?release=20261117-living-treasures';
 import {drawEnemyPose} from './enemy-frames.js?release=20261026-astral-gateways';
-import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20261026-astral-gateways';
+import {arcadeEvent,drawArcade} from './arcade-fx.js?release=20261117-living-treasures';
 import {CELESTIAL_ART} from './celestial-art.js?release=20261026-celestial-treasures';
 import {forwardCastPose} from './cast-pose.js?release=20261001-stick-wheel';
 import {makeCelestialSeal,drawConstellation} from './spell-fx.js?release=20261001-stick-wheel';
 import {LANTERNS} from './level-decor.js?release=20261026-astral-gateways';
 import {advanceWizardAnimation,newWizardAnimation,motionPose,drawAirCloth,idlePose} from './wizard-animation.js?release=20261001-stick-wheel';
 import {drawWaterfalls,waterfallTransform,createWaterfallSprites} from './waterfalls.js?release=20261001-stick-wheel';
-import {PLATFORMS,SEALS,WIDTH,clamp} from './game.js?release=20261026-astral-gateways';
+import {SEALS,WIDTH,clamp} from './game.js?release=20261117-living-treasures';
 const TAU=Math.PI*2;
 const rand=(n)=>{const v=Math.sin(n*127.1+311.7)*43758.5453;return v-Math.floor(v);};
 const WIZARD=[
@@ -28,13 +30,13 @@ const WIZARD=[
 ];
 const PROPS={tree:[40,45,587,575],rock:[633,322,600,270],arch:[22,631,586,575],dragon:[628,629,610,581]};
 export async function loadArt(){
-  const paths={wizardActions:'arcanist-actions-v2.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
+  const paths={pickupMotion:'celestial-v2/living-pickups-v1.webp',emberFlight:'magic-v3/ember-flight-v1.png',woodlandSign:'silverwood-stag-v1.webp',wizardActions:'arcanist-actions-v2.png',wizard:'arcanist-sheet-original-v1.png',wizardWalk:'arcanist-jog-v3.png',wizardAir:'arcanist-air-v1.png',wizardIdle:'arcanist-idle-v2.png',starshard:'starshard-energy-v1.png',wizardCast:'arcanist-forward-cast-v1.png',props:'world-atlas-v1.png',enemies:'enemies-atlas-v2.png'};
   if(!new URLSearchParams(location.search).has('legacy-scene'))Object.assign(paths,{gorgeClouds:'silverwood-clouds-v1.png',gorgeFlora:'silverwood-flora-v1.png',gorgeHorizon:'silverwood-horizon-v4.webp',gorgeRidge:'silverwood-gorge-v2.png'});
   else Object.assign(paths,{silverwoodLayers:'silverwood-layers-v1.png',valley:'last-star-valley-architecture-v3.png'});
   for(const kind of ['ember','frost','chain','flask','chest','power','gem','gold'])paths['item_'+kind]='level1-items/'+kind+'.png';
   for(const [kind,asset] of Object.entries(CELESTIAL_ART))paths['pickup_'+kind]=asset.path;
   for(const [key,asset] of Object.entries({...MAGIC_ART,...ARCANA_ART}))paths[key]=asset.path;
-  const images={arcanaBounds:Object.fromEntries(Object.entries(ARCANA_ART).map(([key,asset])=>[key,asset.bounds])),magicBounds:Object.fromEntries(Object.entries(MAGIC_ART).map(([key,asset])=>[key,asset.bounds])),pickupBounds:Object.fromEntries(Object.entries(CELESTIAL_ART).map(([kind,asset])=>[kind,asset.bounds]))};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;try{await im.decode();images[key]=im;}catch(error){if(!MAGIC_ART[key]&&!ARCANA_ART[key])throw error;console.warn('Optional magic artwork unavailable; using drawn effect:',key);}}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.sealVariants=prepareSealArt(images.sealRelic);images.wizardLightCache=prepareWizardLighting(images);if(images.silverwoodLayers)images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);if(images.valley)images.waterSprites=await createWaterfallSprites(images.valley);return images;
+  const images={arcanaBounds:Object.fromEntries(Object.entries(ARCANA_ART).map(([key,asset])=>[key,asset.bounds])),magicBounds:Object.fromEntries(Object.entries(MAGIC_ART).map(([key,asset])=>[key,asset.bounds])),pickupBounds:Object.fromEntries(Object.entries(CELESTIAL_ART).map(([kind,asset])=>[kind,asset.bounds]))};await Promise.all(Object.entries(paths).map(async([key,path])=>{const im=new Image();im.src=new URL('../assets/'+path,import.meta.url).href;try{await im.decode();images[key]=im;}catch(error){if(key!=='pickupMotion'&&key!=='emberFlight'&&key!=='woodlandSign'&&!MAGIC_ART[key]&&!ARCANA_ART[key])throw error;console.warn('Optional magic artwork unavailable; using drawn effect:',key);}}));if(images.gorgeFlora)images.floraSprites=prepareFlora(images.gorgeFlora);images.sealVariants=prepareSealArt(images.sealRelic);images.wizardLightCache=prepareWizardLighting(images);if(images.silverwoodLayers)images.sceneryPieces=prepareSilverwoodLayers(images.silverwoodLayers);if(images.valley)images.waterSprites=await createWaterfallSprites(images.valley);return images;
 }
 export class Renderer {
   constructor(canvas,art){
@@ -80,6 +82,10 @@ export class Renderer {
     if(e.type==='meteor-hit'){this.burst(e.x,e.y-20,'blue',70,270);this.rings.push({x:e.x,y:e.y,r:20,life:.75,color:'blue',ground:true});this.shake=.18;this.flash=.06;}
     if(e.type==='danger-hit')this.burst(e.x,e.y-15,'violet',10,95);
     if(e.type==='enemy-death'){this.burst(e.x,e.y,e.boss?'gold':'violet',e.boss?42:14,e.boss?160:80);if(e.boss){this.shake=.3;}}
+    if (e.type === 'trail-note') {
+      this.burst(e.x, e.y, 'gold', this.gentle ? 5 : 14, 70);
+      this.rings.push({x:e.x,y:e.y,r:7,life:.38,color:'gold'});
+    }
     if(e.type==='seal')this.burst(e.x,e.y-70,'gold',24,95);
     if(e.type==='ember-impact'){this.burst(e.x,e.y,'gold',35,165);this.rings.push({x:e.x,y:e.y,r:20,life:.45,color:'gold'});}
     if(e.type==='hurt')this.shake=.15;
@@ -132,8 +138,10 @@ export class Renderer {
   }
   platforms(game){
     const c=this.ctx,cam=this.camera;
-    for(const p of PLATFORMS){
-      if(p.x+p.w<cam-100||p.x>cam+this.w+100)continue;const x=p.x-cam;
+    for(const surface of game.platforms){
+      if(surface.x+surface.w<cam-100||surface.x>cam+this.w+100)continue;
+      const p=this.title&&surface.upper ? {...surface,y:surface.restY+hoverOffset(surface,this.time)} : surface;
+      const x=p.x-cam;
       if(!p.upper){
         const stone=p.x>=2710;const gr=c.createLinearGradient(0,p.y,0,800);gr.addColorStop(0,stone?'#58676a':'#1e393a');gr.addColorStop(.25,stone?'#263e48':'#132c31');gr.addColorStop(1,'#07131e');c.fillStyle=gr;c.beginPath();c.rect(x,p.y+15,p.w,260);
         if(stone){for(let j=45;j<p.w-60;j+=185){c.moveTo(x+j,p.y+270);c.lineTo(x+j,p.y+115);c.bezierCurveTo(x+j,p.y+42,x+j+120,p.y+42,x+j+120,p.y+115);c.lineTo(x+j+120,p.y+270);c.closePath();}}
@@ -142,7 +150,10 @@ export class Renderer {
         c.save();c.beginPath();c.rect(x,p.y-15,p.w,260);c.clip();
         const n=Math.ceil(p.w/305);for(let j=0;j<n;j++){this.prop('rock',x+j*(p.w/n)+p.w/n/2,p.y+(stone?41:155),p.w/n+24,stone?58:172,.93,j%2===0);}
         c.restore();
-      }else this.prop('rock',x+p.w/2,p.y+85,p.w+10,95,1,p.id%2===0);
+      }else {
+        this.prop('rock',x+p.w/2,p.y+85,p.w+10,95,1,p.id%2===0);
+        c.save();drawLedgeGrowth(this,p,x);c.restore();
+      }
       // A slender moss rim makes the actual landing surface unambiguous.
       c.strokeStyle='#9cb88b70';c.lineWidth=2;c.beginPath();c.moveTo(x+6,p.y+1);c.lineTo(x+p.w-6,p.y+1);c.stroke();
       if(this.gorgeEnabled&&this.art.floraSprites){drawGorgeFlora(this,game,p);}else for(let j=0;j<p.w/25;j++){
@@ -281,7 +292,12 @@ export class Renderer {
     if(this.title)this.camera=0;else this.camera+=(desired-this.camera)*(1-Math.exp(-dt*6));
     c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,this.canvas.width,this.canvas.height);c.setTransform(this.scale,0,0,this.scale,0,0);c.save();
     this.shake=Math.max(0,this.shake-dt);if(!this.gentle&&this.shake>0)c.translate(Math.sin(this.time*87)*this.shake*8*(this.shakeScale??1),Math.sin(this.time*69)*this.shake*5*(this.shakeScale??1));
-    this.backdrop(game);this.platforms(game);this.seals(game);this.enemies(game);
+    this.backdrop(game);
+    drawSealSky(this, game);
+    this.platforms(game);this.seals(game);
+    drawWoodlandSign(this, game);
+    if (!this.title) drawStarTrails(this, game);
+    this.enemies(game);
     const flicker=p.invuln>0&&p.mantle<=0&&Math.floor(this.time*18)%2===0?.6:1;
     advanceWizardAnimation(this.wizardAnimation,p,dt);
     this.wizard(p,flicker);drawReactiveLight(this,game);

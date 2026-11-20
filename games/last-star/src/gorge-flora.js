@@ -28,6 +28,7 @@ export function drawGorgeFlora(r,game,p){
  const c=r.ctx;
  for(const plant of r.floraLayout.get(p.id)){
   const x=plant.x-r.camera;if(x< -50||x>r.w+50)continue;
+  plant.y=p.y+2;
   const target=plantBend(plant,r.time,game.player,r.gentle);
   const dt=Math.max(0,Math.min(.05,r.time-(plant.lastTime??r.time)));plant.lastTime=r.time;
   plant.bend=plant.bend===undefined?target:plant.bend+(target-plant.bend)*(1-Math.exp(-dt*10));

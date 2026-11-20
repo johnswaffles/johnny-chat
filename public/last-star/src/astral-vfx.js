@@ -1,3 +1,4 @@
+import {drawStarFront} from './flight-motion.js';
 // Presentation only. Event coordinates are copied; no effect can move a combat target.
 const TAU=Math.PI*2;
 const clamp=n=>Math.max(0,Math.min(1,n));
@@ -15,7 +16,7 @@ export function astralEvent(r,e){
  if(r.astralFX.length>ASTRAL_LIMIT)r.astralFX.splice(0,r.astralFX.length-ASTRAL_LIMIT);
 }
 export function drawStarshard(r,x,y,vx,vy){
- const c=r.ctx,t=r.time,frame=Math.floor(t*(r.gentle?8:16))%8;
+ const c=r.ctx,t=r.time,frame=Math.floor(t*(r.gentle?12:34))%8;
  c.save();c.translate(x,y);c.rotate(Math.atan2(vy,vx));
  // Retain the approved compact blue wave and its forward striking surface.
  c.globalCompositeOperation='screen';
@@ -26,6 +27,7 @@ export function drawStarshard(r,x,y,vx,vy){
   c.beginPath();c.moveTo(-72+j*8,side*6);c.bezierCurveTo(-48,side*13+drift,-22,side*5,-7,side*3);c.stroke();
  }
  c.drawImage(r.art.starshard,(frame%4)*384,Math.floor(frame/4)*512,384,512,-49,-42,58,77.333);
+ drawStarFront(r);
  c.restore();
 }
 function portal(r,p,age,open,fade,arrival){

@@ -61,3 +61,19 @@ test('expired, unrelated, and dead-enemy effects do not add drawing work',()=>{
  const r=renderer();assert.equal(drawElementalProjectile(r,{kind:'bolt'}),false);assert.equal(drawElementalEffect(r,effect('chain'),0),false);assert.equal(drawElementalEffect(r,effect('unrelated'),.5),false);
  drawBurningEnemy(r,Object.freeze({dead:true,burn:2}));drawBurningEnemy(r,Object.freeze({dead:false,burn:0}));assert.deepEqual(r.calls,[]);
 });
+
+test('Ember flight advances within one 24-frame sheet and repeats cleanly on either heading',()=>{
+ const sheet={width:1008,height:320};
+ function frame(time,vx){
+  const r=renderer({time,art:{emberFlight:sheet}});
+  drawElementalProjectile(r,{kind:'ember',x:500,y:400,vx,vy:0});
+  const [draw]=r.calls.filter(c=>c[0]==='drawImage');
+  assert.equal(draw[1],sheet);
+  return draw.slice(2,6);
+ }
+ const cells=[];
+ for(let i=0;i<24;i++) cells.push(frame((i+.1)/42,560));
+ assert.equal(new Set(cells.map(String)).size,24);
+ assert.deepEqual(frame(24.1/42,-560),cells[0]);
+ assert.deepEqual(frame(6.1/42,560),[0,80,168,80]);
+});
